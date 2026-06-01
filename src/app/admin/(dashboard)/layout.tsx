@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { redirect, isRedirectError } from "next/navigation";
+import { redirect } from "next/navigation";
 import {
   BarChart3, Boxes, PackageCheck, UsersRound, Star,
 } from "lucide-react";
@@ -13,6 +13,15 @@ const navItems = [
   { href: "/admin/customers", label: "Customers", icon: UsersRound },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
 ];
+
+function isNextRedirectError(error: unknown): boolean {
+  if (error && typeof error === "object" && "digest" in error) {
+    const digest = (error as { digest?: unknown }).digest;
+    return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
+  }
+  return false;
+}
+
 
 export default async function AdminLayout({
   children,
@@ -66,7 +75,7 @@ export default async function AdminLayout({
     </div>
   );
   } catch (error: unknown) {
-    if (isRedirectError(error)) {
+    if (isNextRedirectError(error)) {
       throw error;
     }
     const err = error instanceof Error ? error : new Error(String(error));
