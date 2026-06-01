@@ -38,6 +38,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
   }
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "You must be logged in to submit a review." }, { status: 401 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const { productId, name, rating, title, body: reviewBody } = body;
 
@@ -55,6 +60,7 @@ export async function POST(req: Request) {
 
   const { error } = await supabase.from("reviews").insert({
     product_id: productId,
+    user_id: user.id,
     name,
     rating: numericRating,
     title: title || null,

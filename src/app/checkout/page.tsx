@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCartStore } from "@/store/useCartStore";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
@@ -15,6 +15,7 @@ export default function CheckoutPage() {
   const { items, clearCart } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const idempotencyKey = useRef(crypto.randomUUID());
   const [formData, setFormData] = useState({
     name: "",
     lastName: "",
@@ -76,6 +77,7 @@ export default function CheckoutPage() {
           items,
           paymentMethod,
           userId,
+          idempotencyKey: idempotencyKey.current,
         }),
       });
 
@@ -86,7 +88,9 @@ export default function CheckoutPage() {
       if (data.redirect) {
         window.location.href = data.redirect;
       } else if (data.orderId) {
-        clearCart();
+        if (!data.restored) {
+          clearCart();
+        }
         router.push(`/order-confirmation?id=${data.orderId}`);
       }
     } catch (error) {

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient';
 import { isAdminConfigured, supabaseAdmin } from '@/lib/supabase-admin';
-import { calculateOrderTotals, validateCheckoutPayload } from '@/lib/orders';
+import { validateCheckoutPayload } from '@/lib/orders';
 import { sendOrderNotifications } from '@/lib/notifications';
 import { CartItem } from '@/store/useCartStore';
 
 export async function POST(req: Request) {
   try {
     if (!isSupabaseConfigured) {
-      return NextResponse.json({ error: 'Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.' }, { status: 503 });
+      return NextResponse.json({ error: 'Supabase is not configured.' }, { status: 503 });
     }
 
     const body = await req.json();
@@ -21,63 +21,128 @@ export async function POST(req: Request) {
       postalCode, 
       items, 
       paymentMethod,
-      userId 
+      userId,
+      idempotencyKey,
     } = body;
-    const validationErrors = validateCheckoutPayload({ name, lastName, phone, address, city, postalCode, items, paymentMethod });
 
+    const validationErrors = validateCheckoutPayload({ name, lastName, phone, address, city, postalCode, items, paymentMethod });
     if (Object.keys(validationErrors).length > 0) {
       return NextResponse.json({ error: 'Invalid checkout details', errors: validationErrors }, { status: 400 });
     }
 
-    const { subtotal, shipping, total } = calculateOrderTotals(items);
+    // M-04: Idempotency check — return existing order if same key was used
+    if (idempotencyKey) {
+      const db = isAdminConfigured ? supabaseAdmin : supabase;
+      const { data: existing } = await db
+        .from("orders")
+        .select("id")
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+
+      if (existing) {
+        return NextResponse.json({ orderId: existing.id, restored: true });
+      }
+    }
+
+    const cartItems = items as CartItem[];
+    const slugs = cartItems.map((item) => item.id);
+
+    // M-03: Fetch current product prices and stock from DB
     const db = isAdminConfigured ? supabaseAdmin : supabase;
+    const { data: productRows, error: productError } = await db
+      .from("products")
+      .select("id, slug, price, sale_price, is_on_sale, on_sale, stock")
+      .in("slug", slugs);
+
+    if (productError) throw productError;
+    if (!productRows || productRows.length !== slugs.length) {
+      const found = new Set((productRows ?? []).map((p) => p.slug));
+      const missing = slugs.filter((s) => !found.has(s));
+      return NextResponse.json({ error: `Products not found: ${missing.join(", ")}` }, { status: 400 });
+    }
+
+    const productBySlug = new Map(productRows.map((p) => [p.slug, p]));
+    const serverItems: CartItem[] = [];
+
+    // M-02: Validate stock and use server-side prices
+    for (const clientItem of cartItems) {
+      const product = productBySlug.get(clientItem.id);
+      if (!product) {
+        return NextResponse.json({ error: `Product "${clientItem.id}" not found` }, { status: 400 });
+      }
+
+      if (product.stock !== null && product.stock < clientItem.quantity) {
+        return NextResponse.json(
+          { error: `Insufficient stock for "${clientItem.name}". Available: ${product.stock}` },
+          { status: 409 },
+        );
+      }
+
+      const isOnSale = product.is_on_sale ?? product.on_sale ?? false;
+      const unitPrice = isOnSale && product.sale_price != null
+        ? Number(product.sale_price)
+        : Number(product.price);
+
+      serverItems.push({
+        id: clientItem.id,
+        name: clientItem.name,
+        price: unitPrice,
+        quantity: clientItem.quantity,
+        image: clientItem.image || "",
+        size: clientItem.size || "Default",
+      });
+    }
+
+    // Calculate totals from server-side prices
+    const subtotal = serverItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const shipping = subtotal >= 10000 ? 0 : 500;
+    const total = subtotal + shipping;
+
+    // Create the order
+    const orderPayload: Record<string, unknown> = {
+      customer_name: name,
+      customer_last_name: lastName,
+      phone,
+      address,
+      city,
+      postal_code: postalCode || null,
+      user_id: userId || null,
+      items: serverItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image || "",
+        size: item.size || "Default",
+      })),
+      subtotal,
+      shipping,
+      total,
+      total_amount: total,
+      payment_method: paymentMethod,
+      payment_status: "pending",
+      status: "new",
+    };
+
+    if (idempotencyKey) {
+      orderPayload.idempotency_key = idempotencyKey;
+    }
 
     const { data: order, error: orderError } = await db
-      .from('orders')
-      .insert([
-        {
-          customer_name: name,
-          customer_last_name: lastName,
-          phone,
-          address,
-          city,
-          postal_code: postalCode || null,
-          user_id: userId || null,
-          items: (items as CartItem[]).map((item) => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image || '',
-            size: item.size || 'Default',
-          })),
-          subtotal,
-          shipping,
-          total,
-          payment_method: paymentMethod,
-          payment_status: 'pending',
-          status: 'new',
-          total_amount: total
-        }
-      ])
+      .from("orders")
+      .insert([orderPayload])
       .select()
       .single();
 
     if (orderError) throw orderError;
 
     const orderId = order.id;
-    const cartItems = items as CartItem[];
-    const slugs = cartItems.map((item) => item.id);
-    const { data: productRows } = await db
-      .from("products")
-      .select("id, slug")
-      .in("slug", slugs);
-    const productBySlug = new Map((productRows ?? []).map((product) => [product.slug, product.id]));
 
+    // Insert order_items
     const { error: orderItemsError } = await db.from("order_items").insert(
-      cartItems.map((item) => ({
+      serverItems.map((item) => ({
         order_id: orderId,
-        product_id: productBySlug.get(item.id) ?? null,
+        product_id: productBySlug.get(item.id)?.id ?? null,
         product_slug: item.id,
         product_name: item.name,
         product_image: item.image || null,
@@ -90,6 +155,7 @@ export async function POST(req: Request) {
 
     if (orderItemsError) throw orderItemsError;
 
+    // Create payment record
     const { error: paymentError } = await db.from("payments").insert({
       order_id: orderId,
       method: paymentMethod,
@@ -106,10 +172,10 @@ export async function POST(req: Request) {
       phone,
       address,
       city,
-      items: items as CartItem[],
+      items: serverItems,
       total,
       payment_method: paymentMethod,
-      status: 'new',
+      status: "new",
     });
 
     if (paymentMethod === 'cod') {
@@ -118,7 +184,7 @@ export async function POST(req: Request) {
 
     if (paymentMethod === 'safepay') {
       if (!process.env.SAFEPAY_SECRET) {
-        return NextResponse.json({ orderId, error: 'Safepay is not configured for online payments.' }, { status: 503 });
+        return NextResponse.json({ orderId, error: 'Safepay is not configured.' }, { status: 503 });
       }
 
       const response = await fetch('https://sandbox.api.getsafepay.com/order/v1/init', {
@@ -140,7 +206,7 @@ export async function POST(req: Request) {
         const errorBody = await response.json().catch(() => ({}));
         console.error('Safepay API error:', response.status, errorBody);
         return NextResponse.json(
-          { error: 'Payment gateway temporarily unavailable. Please try COD or another method.' },
+          { error: 'Payment gateway temporarily unavailable.' },
           { status: 502 }
         );
       }
@@ -159,7 +225,7 @@ export async function POST(req: Request) {
 
     if (paymentMethod === 'cashmaal') {
       if (!process.env.CASHMAAL_WEB_ID) {
-        return NextResponse.json({ orderId, error: 'Cashmaal is not configured for online payments.' }, { status: 503 });
+        return NextResponse.json({ orderId, error: 'Cashmaal is not configured.' }, { status: 503 });
       }
 
       return NextResponse.json({ redirect: `/api/cashmaal-redirect?orderId=${orderId}` });

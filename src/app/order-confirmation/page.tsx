@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle2, MessageCircle, MapPin, Truck, ShoppingBag } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+import { isAdminConfigured, supabaseAdmin } from "@/lib/supabase-admin";
 import { notFound } from "next/navigation";
 import { CartItem } from "@/store/useCartStore";
 
@@ -40,7 +41,8 @@ interface OrderRecord {
 async function getOrder(id: string): Promise<OrderRecord | null> {
   if (!isSupabaseConfigured) return null;
 
-  const { data, error } = await supabase
+  const db = isAdminConfigured ? supabaseAdmin : supabase;
+  const { data, error } = await db
     .from('orders')
     .select('*, order_items(*)')
     .eq('id', id)
