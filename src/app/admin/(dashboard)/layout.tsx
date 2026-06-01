@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, isRedirectError } from "next/navigation";
 import {
   BarChart3, Boxes, PackageCheck, UsersRound, Star,
 } from "lucide-react";
@@ -19,28 +19,30 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value;
+  try {
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name) {
+            return cookieStore.get(name)?.value;
+          },
         },
       },
-    },
-  );
+    );
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  const role = session?.user?.app_metadata?.role;
+    const role = session?.user?.app_metadata?.role;
 
-  if (!session || role !== "admin") {
-    redirect("/admin/login");
-  }
+    if (!session || role !== "admin") {
+      redirect("/admin/login");
+    }
+
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
@@ -63,4 +65,20 @@ export default async function AdminLayout({
       <main className="flex-1">{children}</main>
     </div>
   );
+  } catch (error: any) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+    return (
+      <div className="p-8 text-center text-red-500 bg-white border-t-8 border-red-500 max-w-2xl mx-auto my-12 shadow-lg">
+        <h2 className="text-2xl font-bold font-heading mb-4">Admin Layout Rendering Error</h2>
+        <p className="text-sm text-foreground/80 mb-4 font-mono bg-red-50 p-3 border border-red-100 rounded text-left overflow-auto whitespace-pre-wrap">
+          {error.message || error.toString()}
+        </p>
+        <p className="text-xs text-foreground/60 text-left font-mono bg-gray-50 p-3 border border-gray-100 rounded overflow-auto max-h-60">
+          {error.stack}
+        </p>
+      </div>
+    );
+  }
 }
