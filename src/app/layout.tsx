@@ -4,6 +4,7 @@ import { Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CartProvider from "@/components/CartProvider";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
@@ -76,10 +77,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} font-body antialiased`}>
-        <Header />
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <CartProvider>
+          <Header />
+          <main className="min-h-screen">
+            {children}
+          </main>
+        </CartProvider>
         <Footer />
         <Toaster position="bottom-right" toastOptions={{
           style: {
