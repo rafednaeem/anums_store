@@ -11,6 +11,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_idempotency_key ON orders (idempotency_key
 
 -- ── C-01: Remove dangerous public update policy ────────────
 DROP POLICY IF EXISTS "Anyone can update orders" ON orders;
+DROP POLICY IF EXISTS "Admins can update orders" ON orders;
 
 -- Only admins can update orders
 CREATE POLICY "Admins can update orders"
@@ -23,6 +24,7 @@ CREATE POLICY "Admins can update orders"
 -- ── H-02: Restrict order reads ────────────────────────────
 -- Remove the wide-open read policy
 DROP POLICY IF EXISTS "Anyone can read orders by id" ON orders;
+DROP POLICY IF EXISTS "Admins can view all orders" ON orders;
 
 -- Users can read their own orders (via user_id)
 -- Admins can read all orders
