@@ -65,19 +65,22 @@ export default async function AdminLayout({
       <main className="flex-1">{children}</main>
     </div>
   );
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isRedirectError(error)) {
       throw error;
     }
+    const err = error instanceof Error ? error : new Error(String(error));
     return (
       <div className="p-8 text-center text-red-500 bg-white border-t-8 border-red-500 max-w-2xl mx-auto my-12 shadow-lg">
         <h2 className="text-2xl font-bold font-heading mb-4">Admin Layout Rendering Error</h2>
         <p className="text-sm text-foreground/80 mb-4 font-mono bg-red-50 p-3 border border-red-100 rounded text-left overflow-auto whitespace-pre-wrap">
-          {error.message || error.toString()}
+          {err.message}
         </p>
-        <p className="text-xs text-foreground/60 text-left font-mono bg-gray-50 p-3 border border-gray-100 rounded overflow-auto max-h-60">
-          {error.stack}
-        </p>
+        {err.stack && (
+          <p className="text-xs text-foreground/60 text-left font-mono bg-gray-50 p-3 border border-gray-100 rounded overflow-auto max-h-60">
+            {err.stack}
+          </p>
+        )}
       </div>
     );
   }
