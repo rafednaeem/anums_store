@@ -1,17 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  BarChart3, Boxes, PackageCheck, UsersRound, Star,
-} from "lucide-react";
 import AdminNavLink from "./AdminNavLink";
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: BarChart3 },
-  { href: "/admin/orders", label: "Orders", icon: PackageCheck },
-  { href: "/admin/products", label: "Products", icon: Boxes },
-  { href: "/admin/customers", label: "Customers", icon: UsersRound },
-  { href: "/admin/reviews", label: "Reviews", icon: Star },
+  { href: "/admin", label: "Dashboard", iconName: "dashboard" },
+  { href: "/admin/orders", label: "Orders", iconName: "orders" },
+  { href: "/admin/products", label: "Products", iconName: "products" },
+  { href: "/admin/customers", label: "Customers", iconName: "customers" },
+  { href: "/admin/reviews", label: "Reviews", iconName: "reviews" },
 ];
 
 function isNextRedirectError(error: unknown): boolean {
@@ -68,12 +65,12 @@ export default async function AdminLayout({
         </p>
         <h2 className="mb-6 text-2xl font-heading text-ethereal-lavender">Admin</h2>
         <nav className="space-y-1">
-          {navItems.map(({ href, label, icon: Icon }) => (
+          {navItems.map(({ href, label, iconName }) => (
             <AdminNavLink
               key={href}
               href={href}
               label={label}
-              icon={Icon}
+              iconName={iconName}
             />
           ))}
         </nav>

@@ -2,19 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ComponentType } from "react";
+import {
+  BarChart3, Boxes, PackageCheck, UsersRound, Star,
+} from "lucide-react";
+
+const icons: Record<string, typeof BarChart3> = {
+  dashboard: BarChart3,
+  orders: PackageCheck,
+  products: Boxes,
+  customers: UsersRound,
+  reviews: Star,
+};
 
 export default function AdminNavLink({
   href,
   label,
-  icon: Icon,
+  iconName,
 }: {
   href: string;
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  iconName: string;
 }) {
   const pathname = usePathname();
   const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
+  const Icon = icons[iconName];
 
   return (
     <Link
@@ -25,7 +36,7 @@ export default function AdminNavLink({
           : "border-transparent text-foreground/70 hover:bg-ethereal-blush/10 hover:text-ethereal-blush"
       }`}
     >
-      <Icon className="h-4 w-4" />
+      {Icon && <Icon className="h-4 w-4" />}
       {label}
     </Link>
   );
