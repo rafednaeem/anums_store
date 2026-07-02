@@ -1,70 +1,72 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
-import { Cormorant_Garamond } from "next/font/google";
+import { Inter, Cormorant_Garamond } from "next/font/google";
+import { GeistSans, GeistMono } from "geist/font";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import CartProvider from "@/components/CartProvider";
+import { CartProvider } from "@/components/providers/cart-provider";
+import { Toaster } from "sonner";
+import Header from "@/components/layout/header";
+import Footer from "@/components/layout/footer";
 import { Analytics } from "@vercel/analytics/react";
-import { Toaster } from "react-hot-toast";
-import Script from "next/script";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  display: "swap",
-});
-
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
   display: "swap",
 });
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-cormorant",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://anumsstore.pk"),
   title: {
-    default: "Anums Store — Pakistani Fashion Lahore",
     template: "%s | Anums Store",
+    default: "Anums Store | Handcrafted Elegance",
   },
-  description: "Buy ready-to-wear and bridal wear online from Lahore. Pakistani fashion — kurtas, shalwar kameez, lehengas. Fast delivery across Pakistan. Shop now at Anums Store.",
+  description:
+    "Discover handcrafted products that blend tradition with modern elegance. Anums Store offers curated collections with timeless design and sustainable craftsmanship.",
   keywords: [
-    "Pakistani clothes online",
-    "buy kurta online Pakistan",
-    "bridal wear Lahore",
-    "shalwar kameez online PKR",
-    "ready to wear Pakistan",
-    "Anums Store Lahore",
-    "Pakistani fashion online",
+    "handcrafted",
+    "artisan",
+    "luxury",
+    "home decor",
+    "fashion",
+    "sustainable",
+    "elegant",
+    "traditional",
+    "modern design",
   ],
   openGraph: {
     type: "website",
-    locale: "en_PK",
-    url: "https://anumsstore.pk",
+    locale: "en_US",
     siteName: "Anums Store",
+    title: "Anums Store | Handcrafted Elegance",
+    description:
+      "Discover handcrafted products that blend tradition with modern elegance.",
     images: [
       {
-        url: "/og-default.jpg",
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Anums Store — Pakistani Fashion Lahore",
+        alt: "Anums Store",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
+    title: "Anums Store | Handcrafted Elegance",
+    description:
+      "Discover handcrafted products that blend tradition with modern elegance.",
+    images: ["/og-image.jpg"],
   },
   alternates: {
-    canonical: "https://anumsstore.pk",
+    canonical: "https://anumsstore.com",
   },
+  metadataBase: new URL("https://anumsstore.com"),
 };
 
 export default function RootLayout({
@@ -72,43 +74,22 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
-
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} font-body antialiased`}>
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body
+        className={`${inter.variable} ${cormorant.variable} font-sans antialiased`}
+      >
         <CartProvider>
-          <Header />
-          <main className="min-h-screen">
-            {children}
-          </main>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <Toaster richColors position="top-right" />
         </CartProvider>
-        <Footer />
-        <Toaster position="bottom-right" toastOptions={{
-          style: {
-            background: '#F7F4F0',
-            color: '#1A1A1A',
-            border: '1px solid #C8C2BA',
-            fontFamily: 'var(--font-geist-sans)',
-            fontSize: '0.875rem',
-          }
-        }} />
         <Analytics />
-        {GA_ID && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${GA_ID}');
-              `}
-            </Script>
-          </>
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}
       </body>
     </html>

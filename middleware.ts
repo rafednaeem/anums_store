@@ -1,37 +1,44 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
+import { type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request: { headers: request.headers } });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          response.cookies.set(name, value, options);
-        },
-        remove(name, options) {
-          response.cookies.set(name, "", options);
-        },
-      },
-    },
-  );
+  const { supabase, response } = await updateSession(request);
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (request.nextUrl.pathname.startsWith("/admin") && request.nextUrl.pathname !== "/admin/login") {
-    const role = session?.user?.app_metadata?.role;
-    if (!session || role !== "admin") {
-      const redirectUrl = new URL("/admin/login", request.url);
-      redirectUrl.searchParams.set("redirect", request.nextUrl.pathname);
-      return NextResponse.redirect(redirectUrl);
+  const pathname = request.nextUrl.pathname;
+
+  if (pathname.startsWith("/admin")) {
+    if (!user) {
+      const loginUrl = new URL("/auth/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return Response.redirect(loginUrl);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "admin") {
+      return Response.redirect(new URL("/auth/login", request.url));
+    }
+  }
+
+  if (pathname.startsWith("/account")) {
+    if (!user) {
+      const loginUrl = new URL("/auth/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return Response.redirect(loginUrl);
+    }
+  }
+
+  if (pathname.startsWith("/auth")) {
+    if (user) {
+      return Response.redirect(new URL("/account", request.url));
     }
   }
 
@@ -39,5 +46,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/account/:path*", "/auth/:path*"],
 };

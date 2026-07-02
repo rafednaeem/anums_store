@@ -1,45 +1,37 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export default function RootError({
+export default function Error({
   error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
+  const router = useRouter();
 
   return (
-    <div className="container mx-auto px-4 py-24 text-center">
-      <div className="mx-auto max-w-md">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
-          <span className="text-4xl">!</span>
-        </div>
-        <h1 className="mb-4 text-3xl font-heading text-ethereal-lavender">
-          Something went wrong
-        </h1>
-        <p className="mb-8 text-foreground/70">
-          An unexpected error occurred. Please try again or go back to the home page.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button
-            onClick={reset}
-            className="bg-ethereal-lavender px-8 py-3 font-bold tracking-widest text-ethereal-silver transition-colors hover:bg-ethereal-blush hover:text-white"
-          >
-            TRY AGAIN
-          </button>
-          <Link
-            href="/"
-            className="border-2 border-ethereal-lavender px-8 py-3 font-bold tracking-widest text-ethereal-lavender transition-colors hover:border-ethereal-blush hover:text-ethereal-blush"
-          >
-            GO HOME
-          </Link>
-        </div>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+      <h2 className="font-cormorant text-4xl font-bold text-foreground">
+        Something went wrong
+      </h2>
+      <p className="mt-4 max-w-md text-muted-foreground">
+        An unexpected error occurred. Please try again.
+      </p>
+      <div className="mt-8 flex gap-4">
+        <button
+          onClick={reset}
+          className="rounded-md bg-primary px-8 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Try Again
+        </button>
+        <button
+          onClick={() => router.push("/")}
+          className="rounded-md border border-border px-8 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          Go Home
+        </button>
       </div>
     </div>
   );
