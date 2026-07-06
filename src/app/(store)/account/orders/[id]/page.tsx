@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { ChevronRight } from "lucide-react"
@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client"
 import AuthGuard from "@/components/shared/AuthGuard"
 import { formatPrice } from "@/lib/helpers"
 import { ORDER_STATUS_LABELS } from "@/lib/constants"
+
+export const dynamic = "force-dynamic"
 
 interface OrderItem {
   product_name: string
@@ -42,9 +44,11 @@ interface Order {
 
 export default function OrderDetailPage() {
   return (
-    <AuthGuard>
-      <OrderDetailContent />
-    </AuthGuard>
+    <Suspense fallback={null}>
+      <AuthGuard>
+        <OrderDetailContent />
+      </AuthGuard>
+    </Suspense>
   )
 }
 
@@ -209,11 +213,7 @@ function OrderDetailContent() {
               <div className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Method</span>
-                  <span className="capitalize">
-                    {order.payment_method === "cod"
-                      ? "Cash on Delivery"
-                      : "Bank Transfer"}
-                  </span>
+                  <span className="capitalize">Bank Transfer</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Payment Status</span>

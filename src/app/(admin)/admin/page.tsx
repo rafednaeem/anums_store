@@ -5,8 +5,21 @@ import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/constants"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ShoppingBag, DollarSign, Clock, Package, Plus, FolderOpen, Users } from "lucide-react"
+import type { Database } from "@/types/database"
 
 export const dynamic = "force-dynamic"
+
+type OrderSummary = Pick<
+  Database["public"]["Tables"]["orders"]["Row"],
+  | "id"
+  | "order_number"
+  | "customer_name"
+  | "total"
+  | "status"
+  | "payment_status"
+  | "created_at"
+>
+type OrderTotal = Pick<Database["public"]["Tables"]["orders"]["Row"], "total">
 
 export default async function AdminDashboardPage() {
   const supabase = createAdminClient()
@@ -17,8 +30,7 @@ export default async function AdminDashboardPage() {
       supabase
         .from("orders")
         .select("total")
-        .eq("payment_status", "verified")
-        .or("payment_status.eq.paid"),
+        .eq("payment_status", "verified"),
       supabase
         .from("orders")
         .select("id", { count: "exact", head: true })
@@ -36,10 +48,11 @@ export default async function AdminDashboardPage() {
     ])
 
   const totalOrders = ordersResult.count ?? 0
-  const revenue = revenueResult.data?.reduce((sum, o) => sum + (o.total ?? 0), 0) ?? 0
+  const revenueData = (revenueResult.data ?? []) as OrderTotal[]
+  const revenue = revenueData.reduce((sum, o) => sum + (o.total ?? 0), 0)
   const pendingPayments = pendingResult.count ?? 0
   const lowStockCount = lowStockResult.count ?? 0
-  const recentOrders = recentOrdersResult.data ?? []
+  const recentOrders = (recentOrdersResult.data ?? []) as OrderSummary[]
 
   const stats = [
     {
@@ -52,7 +65,7 @@ export default async function AdminDashboardPage() {
       title: "Revenue",
       value: formatPrice(revenue),
       icon: DollarSign,
-      description: "Paid orders",
+      description: "Verified payments",
     },
     {
       title: "Pending Payments",

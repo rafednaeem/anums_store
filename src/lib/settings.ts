@@ -18,7 +18,8 @@ export async function getSettings(): Promise<Record<string, string>> {
     return cache || {}
   }
 
-  cache = data.reduce((acc, row) => {
+  const list = (data ?? []) as Array<{ key: string; value: string }>
+  cache = list.reduce((acc, row) => {
     acc[row.key] = row.value
     return acc
   }, {} as Record<string, string>)
@@ -37,6 +38,7 @@ export function extractSettings(settings: Record<string, string>) {
     storeName: settings.store_name || process.env.NEXT_PUBLIC_STORE_NAME || "Anums Store",
     storeEmail: settings.store_email || process.env.NEXT_PUBLIC_STORE_EMAIL || "",
     storePhone: settings.store_phone || process.env.NEXT_PUBLIC_STORE_PHONE || "",
+    storeAddress: settings.store_address || "",
     whatsappNumber: settings.whatsapp_number || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "",
     bankName: settings.bank_name || "",
     bankAccount: settings.bank_account || "",

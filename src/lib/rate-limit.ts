@@ -25,10 +25,10 @@ export function rateLimit(
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now()
-    for (const [key, record] of rateLimitMap.entries()) {
+    rateLimitMap.forEach((record, key) => {
       if (now - record.timestamp > 300000) {
         rateLimitMap.delete(key)
       }
-    }
+    })
   }, 60000)
 }

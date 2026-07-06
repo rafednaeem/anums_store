@@ -9,8 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Phone } from "lucide-react"
 import { OrderActions } from "./OrderActions"
+import type { Database } from "@/types/database"
 
 export const dynamic = "force-dynamic"
+
+type Order = Database["public"]["Tables"]["orders"]["Row"]
+type OrderItem = Database["public"]["Tables"]["order_items"]["Row"]
+type Payment = Database["public"]["Tables"]["payments"]["Row"]
+type Timeline = Database["public"]["Tables"]["order_timeline"]["Row"]
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>
@@ -28,25 +34,32 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   if (error || !order) notFound()
 
-  const { data: orderItems } = await supabase
-    .from("order_items")
-    .select("*")
-    .eq("order_id", id)
-    .order("created_at", { ascending: true })
+  const orderData = order as Order
 
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("*")
-    .eq("order_id", id)
-    .order("created_at", { ascending: false })
+  const [{ data: orderItems }, { data: payments }, { data: timeline }] =
+    await Promise.all([
+      supabase
+        .from("order_items")
+        .select("*")
+        .eq("order_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("payments")
+        .select("*")
+        .eq("order_id", id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("order_timeline")
+        .select("*")
+        .eq("order_id", id)
+        .order("created_at", { ascending: false }),
+    ])
 
-  const { data: timeline } = await supabase
-    .from("order_timeline")
-    .select("*")
-    .eq("order_id", id)
-    .order("created_at", { ascending: false })
+  const items = (orderItems ?? []) as OrderItem[]
+  const paymentList = (payments ?? []) as Payment[]
+  const timelineList = (timeline ?? []) as Timeline[]
 
-  const pendingPayment = payments?.find((p) => p.status === "submitted")
+  const pendingPayment = paymentList.find((p) => p.status === "submitted")
 
   return (
     <div className="space-y-6">
@@ -59,11 +72,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
-            Order {order.order_number}
+            Order {orderData.order_number}
           </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Placed on{" "}
-            {new Date(order.created_at).toLocaleDateString("en-PK", {
+            {new Date(orderData.created_at).toLocaleDateString("en-PK", {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -80,7 +93,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Order Details</CardTitle>
               <Badge variant="outline">
-                {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                {ORDER_STATUS_LABELS[orderData.status] ?? orderData.status}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -89,44 +102,40 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">
                     Order Number
                   </p>
-                  <p className="font-medium">{order.order_number}</p>
+                  <p className="font-medium">{orderData.order_number}</p>
                 </div>
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">
                     Payment Method
                   </p>
-                  <p className="font-medium capitalize">
-                    {order.payment_method === "bank_transfer"
-                      ? "Bank Transfer"
-                      : "Cash on Delivery"}
-                  </p>
+                  <p className="font-medium capitalize">Bank Transfer</p>
                 </div>
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">
                     Subtotal
                   </p>
-                  <p className="font-medium">{formatPrice(order.subtotal)}</p>
+                  <p className="font-medium">{formatPrice(orderData.subtotal)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">
                     Shipping
                   </p>
                   <p className="font-medium">
-                    {order.shipping === 0 ? "Free" : formatPrice(order.shipping)}
+                    {orderData.shipping === 0 ? "Free" : formatPrice(orderData.shipping)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">
                     Total
                   </p>
-                  <p className="text-lg font-bold">{formatPrice(order.total)}</p>
+                  <p className="text-lg font-bold">{formatPrice(orderData.total)}</p>
                 </div>
-                {order.notes && (
+                {orderData.notes && (
                   <div className="sm:col-span-2">
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
                       Notes
                     </p>
-                    <p className="font-medium">{order.notes}</p>
+                    <p className="font-medium">{orderData.notes}</p>
                   </div>
                 )}
               </div>
@@ -135,11 +144,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
           <Card>
             <CardHeader>
-              <CardTitle>Items ({orderItems?.length ?? 0})</CardTitle>
+              <CardTitle>Items ({items.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {orderItems?.map((item) => (
+                {items.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-center gap-4 rounded-lg border border-neutral-100 p-3 dark:border-neutral-800"
@@ -151,6 +160,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         width={64}
                         height={64}
                         className="h-16 w-16 rounded-md object-cover"
+                        unoptimized={item.product_image.includes("supabase")}
                       />
                     ) : (
                       <div className="flex h-16 w-16 items-center justify-center rounded-md bg-neutral-100 dark:bg-neutral-800">
@@ -175,24 +185,20 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </CardContent>
           </Card>
 
-          {payments && payments.length > 0 && (
+          {paymentList.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Payment Info</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {payments.map((payment) => (
+                {paymentList.map((payment) => (
                   <div
                     key={payment.id}
                     className="rounded-lg border border-neutral-100 p-4 dark:border-neutral-800"
                   >
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <p className="font-medium capitalize">
-                          {payment.method === "bank_transfer"
-                            ? "Bank Transfer"
-                            : "Cash on Delivery"}
-                        </p>
+                        <p className="font-medium capitalize">Bank Transfer</p>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400">
                           {formatPrice(payment.amount)}
                         </p>
@@ -207,8 +213,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                           payment.status === "verified" || payment.status === "paid"
                             ? "default"
                             : payment.status === "rejected"
-                            ? "destructive"
-                            : "secondary"
+                              ? "destructive"
+                              : "secondary"
                         }
                       >
                         {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status}
@@ -225,6 +231,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                           width={200}
                           height={200}
                           className="rounded-md border border-neutral-200 dark:border-neutral-800"
+                          unoptimized={payment.proof_url.includes("supabase")}
                         />
                       </div>
                     )}
@@ -251,19 +258,19 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Name</p>
                 <p className="font-medium">
-                  {order.customer_name} {order.customer_last_name}
+                  {orderData.customer_name} {orderData.customer_last_name}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Phone</p>
                 <a
-                  href={`https://wa.me/${order.phone.replace(/[^0-9]/g, "")}`}
+                  href={`https://wa.me/${orderData.phone.replace(/[^0-9]/g, "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 font-medium text-green-600 hover:underline dark:text-green-400"
                 >
                   <Phone className="h-3 w-3" />
-                  {order.phone}
+                  {orderData.phone}
                 </a>
               </div>
               <div>
@@ -271,30 +278,30 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   Address
                 </p>
                 <p className="font-medium">
-                  {order.address}
+                  {orderData.address}
                   <br />
-                  {order.city}, {order.province}
-                  {order.postal_code && <>, {order.postal_code}</>}
+                  {orderData.city}, {orderData.province}
+                  {orderData.postal_code && <>, {orderData.postal_code}</>}
                 </p>
               </div>
             </CardContent>
           </Card>
 
           <OrderActions
-            orderId={order.id}
-            currentStatus={order.status}
-            currentPaymentStatus={order.payment_status}
+            orderId={orderData.id}
+            currentStatus={orderData.status}
+            currentPaymentStatus={orderData.payment_status}
             hasPendingPayment={!!pendingPayment}
           />
 
-          {timeline && timeline.length > 0 && (
+          {timelineList.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Timeline</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {timeline.map((entry) => (
+                  {timelineList.map((entry) => (
                     <div key={entry.id} className="flex gap-3">
                       <div className="relative flex flex-col items-center">
                         <div className="h-2 w-2 rounded-full bg-neutral-900 dark:bg-neutral-50" />

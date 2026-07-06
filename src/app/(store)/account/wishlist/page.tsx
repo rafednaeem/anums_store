@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { Heart, ChevronRight, Trash2 } from "lucide-react"
+
+export const dynamic = "force-dynamic"
 import { createClient } from "@/lib/supabase/client"
 import AuthGuard from "@/components/shared/AuthGuard"
 import ProductCard from "@/components/store/ProductCard"
@@ -28,9 +30,11 @@ interface WishlistItem {
 
 export default function WishlistPage() {
   return (
-    <AuthGuard>
-      <WishlistContent />
-    </AuthGuard>
+    <Suspense fallback={null}>
+      <AuthGuard>
+        <WishlistContent />
+      </AuthGuard>
+    </Suspense>
   )
 }
 
@@ -56,16 +60,35 @@ function WishlistContent() {
       .order("created_at", { ascending: false })
 
     if (data) {
-      const formatted = data.map((item) => ({
-        id: item.id,
-        product_id: item.product_id,
-        product: {
-          ...(item.product as unknown as WishlistProduct),
-          category: Array.isArray((item.product as Record<string, unknown>)?.category)
-            ? ((item.product as Record<string, unknown>).category as unknown[])[0]
-            : (item.product as Record<string, unknown>)?.category,
-        },
-      }))
+      const list = data as unknown as Array<{
+        id: string
+        product_id: string
+        product: WishlistProduct & { category: { name: string } | { name: string }[] | null }
+      }>
+
+      const formatted = list.map((item) => {
+        const product = item.product
+        const rawCategory = product.category
+        const category = Array.isArray(rawCategory)
+          ? rawCategory[0] ?? null
+          : rawCategory
+        return {
+          id: item.id,
+          product_id: item.product_id,
+          product: {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: product.price,
+            compare_price: product.compare_price,
+            sale_price: product.sale_price,
+            is_on_sale: product.is_on_sale,
+            cover_url: product.cover_url,
+            inventory_count: product.inventory_count,
+            category,
+          },
+        }
+      })
       setItems(formatted)
     }
     setLoading(false)

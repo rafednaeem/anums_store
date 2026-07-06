@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import {
   ChevronRight,
@@ -10,6 +10,8 @@ import {
   Trash2,
   Check,
 } from "lucide-react"
+
+export const dynamic = "force-dynamic"
 import { createClient } from "@/lib/supabase/client"
 import AuthGuard from "@/components/shared/AuthGuard"
 import { Button } from "@/components/ui/button"
@@ -33,9 +35,11 @@ interface Address {
 
 export default function AddressesPage() {
   return (
-    <AuthGuard>
-      <AddressesContent />
-    </AuthGuard>
+    <Suspense fallback={null}>
+      <AuthGuard>
+        <AddressesContent />
+      </AuthGuard>
+    </Suspense>
   )
 }
 

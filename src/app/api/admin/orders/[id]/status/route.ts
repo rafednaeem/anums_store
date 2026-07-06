@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { sendOrderEmail } from '@/lib/email';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 const VALID_STATUSES = [
-  'pending',
-  'confirmed',
+  'new',
+  'payment_submitted',
+  'payment_verified',
+  'payment_rejected',
   'processing',
   'shipped',
+  'dispatched',
   'delivered',
   'cancelled',
+  'refunded',
 ] as const;
 
 type ValidStatus = (typeof VALID_STATUSES)[number];
@@ -54,8 +58,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const { data: order, error: fetchError } = await supabase
-    .from('orders')
+  const serviceRole = createServiceRoleClient();
+
+  const { data: order, error: fetchError } = await (
+    serviceRole.from('orders') as unknown as {
+      select: (cols: string) => {
+        eq: (col: string, val: string) => {
+          single: () => Promise<{ data: Record<string, unknown> | null; error: { message: string } | null }>
+        }
+      }
+    }
+  )
     .select('*')
     .eq('id', id)
     .single();
@@ -64,15 +77,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 });
   }
 
-  const { error: updateError } = await supabase
-    .from('orders')
-    .update({
-      status,
-      updated_at: new Date().toISOString(),
-      ...(status === 'cancelled' ? { cancelled_at: new Date().toISOString() } : {}),
-      ...(status === 'delivered' ? { delivered_at: new Date().toISOString() } : {}),
-      ...(status === 'shipped' ? { shipped_at: new Date().toISOString() } : {}),
-    })
+  const updatePayload: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+  }
+
+  const { error: updateError } = await (
+    serviceRole.from('orders') as unknown as {
+      update: (values: Record<string, unknown>) => {
+        eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>
+      }
+    }
+  )
+    .update(updatePayload)
     .eq('id', id);
 
   if (updateError) {
@@ -80,36 +97,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Failed to update order status' }, { status: 500 });
   }
 
-  const { error: timelineError } = await supabase.from('order_timeline').insert({
+  const { error: timelineError } = await (
+    serviceRole.from('order_timeline') as unknown as {
+      insert: (values: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
+    }
+  ).insert({
     order_id: id,
-    event: `status_changed_${status}`,
-    details: {
-      previous_status: order.status,
-      new_status: status,
-      notes: notes || null,
-      changed_by: user.id,
-    },
-    created_at: new Date().toISOString(),
+    status,
+    note: notes || `Status changed from ${order.status} to ${status}`,
+    created_by: user.id,
   });
 
   if (timelineError) {
     console.error('Failed to insert timeline entry:', timelineError.message);
-  }
-
-  const emailEventMap: Record<ValidStatus, string> = {
-    pending: 'confirmed',
-    confirmed: 'confirmed',
-    processing: 'confirmed',
-    shipped: 'shipped',
-    delivered: 'delivered',
-    cancelled: 'cancelled',
-  };
-
-  const emailEvent = emailEventMap[status as ValidStatus];
-  if (emailEvent && emailEvent !== order.status) {
-    sendOrderEmail(id, emailEvent as any).catch((err) => {
-      console.error('Failed to send order status email:', err);
-    });
   }
 
   return NextResponse.json({

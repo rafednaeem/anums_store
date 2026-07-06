@@ -26,7 +26,7 @@ export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   refunded: [],
 }
 
-export const PAYMENT_METHODS = ["bank_transfer", "cod"] as const
+export const PAYMENT_METHODS = ["bank_transfer"] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
 
 export const PAYMENT_STATUSES = ["pending", "submitted", "verified", "rejected", "paid", "failed"] as const

@@ -20,19 +20,24 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { X, Plus } from "lucide-react"
+import { ImageUploader } from "@/components/shared/ImageUploader"
+import { MultiImageUploader } from "@/components/shared/MultiImageUploader"
 
 interface ProductFormProps {
-  initialData?: ProductInput & { id?: string; gallery_urls?: string[]; sizes?: string[]; colors?: { name: string; hex: string }[] }
+  initialData?: ProductInput & { id?: string }
   categories?: { id: string; name: string }[]
 }
 
-export function ProductForm({ initialData }: ProductFormProps) {
+export function ProductForm({ initialData, categories = [] }: ProductFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sizeInput, setSizeInput] = useState("")
   const [colorName, setColorName] = useState("")
   const [colorHex, setColorHex] = useState("#000000")
-  const [galleryInput, setGalleryInput] = useState("")
+  const [coverUrl, setCoverUrl] = useState<string | null>(initialData?.cover_url ?? null)
+  const [galleryUrls, setGalleryUrls] = useState<string[]>(
+    initialData?.gallery_urls ?? []
+  )
 
   const {
     register,
@@ -62,7 +67,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
 
   const sizes = watch("sizes") ?? []
   const colors = watch("colors") ?? []
-  const galleryUrls = watch("gallery_urls") ?? []
+  const categoryId = watch("category_id")
 
   function addSize() {
     const val = sizeInput.trim()
@@ -83,7 +88,9 @@ export function ProductForm({ initialData }: ProductFormProps) {
     const name = colorName.trim()
     if (!name) return
     if (colors.some((c) => c.name === name)) return
-    setValue("colors", [...colors, { name, hex: colorHex }], { shouldValidate: true })
+    setValue("colors", [...colors, { name, hex: colorHex }], {
+      shouldValidate: true,
+    })
     setColorName("")
     setColorHex("#000000")
   }
@@ -96,35 +103,41 @@ export function ProductForm({ initialData }: ProductFormProps) {
     )
   }
 
-  function addGalleryUrl() {
-    const url = galleryInput.trim()
-    if (!url) return
-    setValue("gallery_urls", [...galleryUrls, url], { shouldValidate: true })
-    setGalleryInput("")
+  function handleCoverChange(url: string | null) {
+    setCoverUrl(url)
+    setValue("cover_url", url, { shouldValidate: true })
   }
 
-  function removeGalleryUrl(url: string) {
-    setValue(
-      "gallery_urls",
-      galleryUrls.filter((u) => u !== url),
-      { shouldValidate: true }
-    )
+  function handleGalleryChange(urls: string[]) {
+    setGalleryUrls(urls)
+    setValue("gallery_urls", urls, { shouldValidate: true })
   }
 
   async function onSubmit(data: ProductInput) {
     setIsSubmitting(true)
     try {
       if (initialData?.id) {
-        await updateProduct(initialData.id, data)
+        await updateProduct(initialData.id, {
+          ...data,
+          cover_url: coverUrl,
+          gallery_urls: galleryUrls,
+        })
         toast.success("Product updated")
         router.push("/admin/products")
+        router.refresh()
       } else {
-        await createProduct(data)
+        await createProduct({
+          ...data,
+          cover_url: coverUrl,
+          gallery_urls: galleryUrls,
+        })
         toast.success("Product created")
         router.push("/admin/products")
+        router.refresh()
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong")
+      const message = err instanceof Error ? err.message : "Something went wrong"
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -147,7 +160,14 @@ export function ProductForm({ initialData }: ProductFormProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="slug">Slug</Label>
-              <Input id="slug" {...register("slug")} placeholder="auto-generated" />
+              <Input
+                id="slug"
+                {...register("slug")}
+                placeholder="auto-generated from name"
+              />
+              {errors.slug && (
+                <p className="text-xs text-red-500">{errors.slug.message}</p>
+              )}
             </div>
           </div>
 
@@ -160,20 +180,31 @@ export function ProductForm({ initialData }: ProductFormProps) {
             <div className="space-y-2">
               <Label htmlFor="category_id">Category</Label>
               <Select
-                value={watch("category_id") ?? ""}
-                onValueChange={(val) => setValue("category_id", val || undefined)}
+                value={categoryId ?? "none"}
+                onValueChange={(val) =>
+                  setValue("category_id", val === "none" ? undefined : val)
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No category</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="craft_type">Craft Type</Label>
-              <Input id="craft_type" {...register("craft_type")} />
+              <Input
+                id="craft_type"
+                {...register("craft_type")}
+                placeholder="e.g. Embroidered, Handwoven"
+              />
             </div>
           </div>
         </CardContent>
@@ -190,7 +221,8 @@ export function ProductForm({ initialData }: ProductFormProps) {
               <Input
                 id="price"
                 type="number"
-                step="0.01"
+                step="1"
+                min="0"
                 {...register("price", { valueAsNumber: true })}
               />
               {errors.price && (
@@ -202,8 +234,11 @@ export function ProductForm({ initialData }: ProductFormProps) {
               <Input
                 id="compare_price"
                 type="number"
-                step="0.01"
-                {...register("compare_price", { valueAsNumber: true })}
+                step="1"
+                min="0"
+                {...register("compare_price", {
+                  setValueAs: (v) => (v === "" || v == null ? null : Number(v)),
+                })}
               />
             </div>
             <div className="space-y-2">
@@ -211,8 +246,11 @@ export function ProductForm({ initialData }: ProductFormProps) {
               <Input
                 id="sale_price"
                 type="number"
-                step="0.01"
-                {...register("sale_price", { valueAsNumber: true })}
+                step="1"
+                min="0"
+                {...register("sale_price", {
+                  setValueAs: (v) => (v === "" || v == null ? null : Number(v)),
+                })}
               />
             </div>
           </div>
@@ -223,6 +261,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
               <Input
                 id="inventory_count"
                 type="number"
+                min="0"
                 {...register("inventory_count", { valueAsNumber: true })}
               />
             </div>
@@ -245,53 +284,36 @@ export function ProductForm({ initialData }: ProductFormProps) {
         <CardHeader>
           <CardTitle>Images</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="cover_url">Cover Image URL</Label>
-            <Input
-              id="cover_url"
-              {...register("cover_url")}
-              placeholder="https://..."
-            />
+            <Label>Cover Image</Label>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              The main image shown in product cards and the product page hero.
+            </p>
+            <div className="max-w-xs">
+              <ImageUploader
+                value={coverUrl}
+                onChange={handleCoverChange}
+                endpoint="/api/admin/upload/product-image"
+                folder="products/cover"
+                aspectRatio="portrait"
+                label="Upload Cover"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
             <Label>Gallery Images</Label>
-            <div className="flex gap-2">
-              <Input
-                value={galleryInput}
-                onChange={(e) => setGalleryInput(e.target.value)}
-                placeholder="Image URL..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    addGalleryUrl()
-                  }
-                }}
-              />
-              <Button type="button" variant="outline" size="icon" onClick={addGalleryUrl}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            {galleryUrls.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {galleryUrls.map((url) => (
-                  <div
-                    key={url}
-                    className="flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs dark:border-neutral-800"
-                  >
-                    <span className="max-w-[200px] truncate">{url}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeGalleryUrl(url)}
-                      className="ml-1 text-neutral-400 hover:text-red-500"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Additional product images. Drag and drop to reorder. The first image is used as the cover if no cover is set.
+            </p>
+            <MultiImageUploader
+              values={galleryUrls}
+              onChange={handleGalleryChange}
+              endpoint="/api/admin/upload/product-image"
+              folder="products/gallery"
+              max={10}
+            />
           </div>
         </CardContent>
       </Card>
@@ -303,6 +325,9 @@ export function ProductForm({ initialData }: ProductFormProps) {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label>Sizes</Label>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Add sizes such as S, M, L, XL.
+            </p>
             <div className="flex gap-2">
               <Input
                 value={sizeInput}
@@ -342,12 +367,21 @@ export function ProductForm({ initialData }: ProductFormProps) {
 
           <div className="space-y-2">
             <Label>Colors</Label>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Add colors with hex codes.
+            </p>
             <div className="flex gap-2">
               <Input
                 value={colorName}
                 onChange={(e) => setColorName(e.target.value)}
                 placeholder="Color name"
                 className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    addColor()
+                  }
+                }}
               />
               <input
                 type="color"
@@ -388,7 +422,11 @@ export function ProductForm({ initialData }: ProductFormProps) {
 
       <div className="flex gap-3">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : initialData?.id ? "Update Product" : "Create Product"}
+          {isSubmitting
+            ? "Saving..."
+            : initialData?.id
+              ? "Update Product"
+              : "Create Product"}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancel

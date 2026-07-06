@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 export interface BusinessSettings {
   storeName: string;
@@ -22,26 +22,32 @@ export async function getBusinessSettings(): Promise<BusinessSettings> {
     return cachedSettings;
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
+
   const { data, error } = await supabase
     .from('site_settings')
-    .select('*')
-    .single();
+    .select('key, value');
 
   if (error || !data) {
     return getDefaultSettings();
   }
 
+  const list = data as Array<{ key: string; value: string }>
+  const map = list.reduce((acc, row) => {
+    acc[row.key] = row.value;
+    return acc;
+  }, {} as Record<string, string>);
+
   cachedSettings = {
-    storeName: data.store_name || 'Anums Store',
-    storeEmail: data.store_email || 'hello@anumsstore.com',
-    storePhone: data.store_phone || '',
-    storeAddress: data.store_address || '',
-    storeWebsite: data.store_website || 'https://anumsstore.com',
-    bankName: data.bank_name || '',
-    bankAccountNumber: data.bank_account_number || '',
-    bankAccountName: data.bank_account_name || '',
-    currency: data.currency || 'NGN',
+    storeName: map.store_name || process.env.NEXT_PUBLIC_STORE_NAME || 'Anums Store',
+    storeEmail: map.store_email || process.env.NEXT_PUBLIC_STORE_EMAIL || '',
+    storePhone: map.store_phone || process.env.NEXT_PUBLIC_STORE_PHONE || '',
+    storeAddress: map.store_address || '',
+    storeWebsite: process.env.NEXT_PUBLIC_BASE_URL || 'https://anumsstore.pk',
+    bankName: map.bank_name || '',
+    bankAccountNumber: map.bank_account || '',
+    bankAccountName: map.bank_account_title || '',
+    currency: 'PKR',
   };
   cacheTimestamp = now;
 
@@ -50,15 +56,15 @@ export async function getBusinessSettings(): Promise<BusinessSettings> {
 
 function getDefaultSettings(): BusinessSettings {
   return {
-    storeName: 'Anums Store',
-    storeEmail: 'hello@anumsstore.com',
-    storePhone: '',
+    storeName: process.env.NEXT_PUBLIC_STORE_NAME || 'Anums Store',
+    storeEmail: process.env.NEXT_PUBLIC_STORE_EMAIL || '',
+    storePhone: process.env.NEXT_PUBLIC_STORE_PHONE || '',
     storeAddress: '',
-    storeWebsite: 'https://anumsstore.com',
+    storeWebsite: process.env.NEXT_PUBLIC_BASE_URL || 'https://anumsstore.pk',
     bankName: '',
     bankAccountNumber: '',
     bankAccountName: '',
-    currency: 'NGN',
+    currency: 'PKR',
   };
 }
 

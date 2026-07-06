@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { getProvider } from './providers';
 import type { SendEmailParams } from './providers';
 
@@ -34,11 +34,20 @@ export async function sendWithRetry(
 }
 
 export async function isDuplicate(dedupKey: string, withinMinutes: number = 24): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const cutoff = new Date(Date.now() - withinMinutes * 60 * 1000).toISOString();
 
-  const { data, error } = await supabase
-    .from('email_logs')
+  const { data, error } = await (
+    supabase.from('email_logs') as unknown as {
+      select: (cols: string) => {
+        eq: (col: string, val: string) => {
+          gte: (col: string, val: string) => {
+            limit: (n: number) => Promise<{ data: unknown[] | null; error: { message: string } | null }>
+          }
+        }
+      }
+    }
+  )
     .select('id')
     .eq('dedup_key', dedupKey)
     .gte('created_at', cutoff)
@@ -58,18 +67,21 @@ export async function logEmail(
   messageId?: string,
   error?: string
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const dedupKey = `${params.to}:${params.subject}:${new Date().toISOString().slice(0, 13)}`;
 
-  const { error: insertError } = await supabase.from('email_logs').insert({
+  const { error: insertError } = await (
+    supabase.from('email_logs') as unknown as {
+      insert: (values: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
+    }
+  ).insert({
     to_email: params.to,
     subject: params.subject,
     status,
-    provider_message_id: messageId || null,
-    error_message: error || null,
+    message_id: messageId || null,
+    error: error || null,
     dedup_key: dedupKey,
-    sent_at: status === 'sent' ? new Date().toISOString() : null,
   });
 
   if (insertError) {

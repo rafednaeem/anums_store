@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { sendInquiryConfirmation } from '@/lib/email';
+import { inquirySchema } from '@/lib/validations';
 
 const RATE_LIMIT_WINDOW = 60 * 1000;
 const RATE_LIMIT_MAX = 3;
@@ -23,27 +23,6 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-const inquirySchema = {
-  validate(data: any): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (!data.name || typeof data.name !== 'string' || data.name.trim().length < 2) {
-      errors.push('Name is required (min 2 characters)');
-    }
-    if (!data.email || typeof data.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-      errors.push('Valid email is required');
-    }
-    if (!data.subject || typeof data.subject !== 'string' || data.subject.trim().length < 3) {
-      errors.push('Subject is required (min 3 characters)');
-    }
-    if (!data.message || typeof data.message !== 'string' || data.message.trim().length < 10) {
-      errors.push('Message is required (min 10 characters)');
-    }
-
-    return { valid: errors.length === 0, errors };
-  },
-};
-
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
 
@@ -54,27 +33,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const validation = inquirySchema.validate(body);
-  if (!validation.valid) {
-    return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+  const validation = inquirySchema.safeParse(body);
+  if (!validation.success) {
+    const firstError = validation.error.errors[0];
+    return NextResponse.json(
+      { error: firstError?.message ?? 'Validation failed' },
+      { status: 400 }
+    );
   }
 
+  const data = validation.data;
   const supabase = await createClient();
 
   const { data: inquiry, error: insertError } = await supabase
     .from('inquiries')
     .insert({
-      name: body.name.trim(),
-      email: body.email.trim().toLowerCase(),
-      subject: body.subject.trim(),
-      message: body.message.trim(),
+      name: data.name,
+      contact: data.email,
+      message: `[${data.subject || 'No subject'}]\n\n${data.message}`,
       status: 'new',
     })
     .select('id')
@@ -87,10 +70,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-
-  sendInquiryConfirmation(inquiry.id).catch((err) => {
-    console.error('Failed to send inquiry confirmation email:', err);
-  });
 
   return NextResponse.json(
     { message: 'Inquiry submitted successfully', id: inquiry.id },

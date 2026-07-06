@@ -6,9 +6,17 @@ import { ORDER_STATUS_LABELS } from "@/lib/constants"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Phone } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
+import type { Database } from "@/types/database"
 
 export const dynamic = "force-dynamic"
+
+type Customer = Database["public"]["Tables"]["profiles"]["Row"]
+type Order = Pick<
+  Database["public"]["Tables"]["orders"]["Row"],
+  "id" | "order_number" | "total" | "status" | "payment_status" | "created_at"
+>
+type Address = Database["public"]["Tables"]["addresses"]["Row"]
 
 interface CustomerDetailPageProps {
   params: Promise<{ id: string }>
@@ -26,6 +34,8 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
 
   if (error || !customer) notFound()
 
+  const customerData = customer as Customer
+
   const { data: orders } = await supabase
     .from("orders")
     .select("id, order_number, total, status, payment_status, created_at")
@@ -38,7 +48,12 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
     .eq("user_id", id)
     .order("is_default", { ascending: false })
 
-  const totalSpent = orders?.reduce((sum, o) => sum + (o.total ?? 0), 0) ?? 0
+  const orderList = (orders ?? []) as Order[]
+  const addressList = (addresses ?? []) as Address[]
+  const totalSpent = orderList.reduce(
+    (sum, o) => sum + (o.total ?? 0),
+    0
+  )
 
   return (
     <div className="space-y-6">
@@ -51,10 +66,10 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
-            {customer.full_name || "Customer"}
+            {customerData.full_name || "Customer"}
           </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            {customer.email}
+            {customerData.email}
           </p>
         </div>
       </div>
@@ -68,20 +83,20 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
             <CardContent className="space-y-3">
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Name</p>
-                <p className="font-medium">{customer.full_name ?? "N/A"}</p>
+                <p className="font-medium">{customerData.full_name ?? "N/A"}</p>
               </div>
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Email</p>
-                <p className="font-medium">{customer.email}</p>
+                <p className="font-medium">{customerData.email}</p>
               </div>
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Phone</p>
-                <p className="font-medium">{customer.phone ?? "N/A"}</p>
+                <p className="font-medium">{customerData.phone ?? "N/A"}</p>
               </div>
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Joined</p>
                 <p className="font-medium">
-                  {new Date(customer.created_at).toLocaleDateString("en-PK", {
+                  {new Date(customerData.created_at).toLocaleDateString("en-PK", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -100,7 +115,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Total Orders
                 </p>
-                <p className="text-2xl font-bold">{orders?.length ?? 0}</p>
+                <p className="text-2xl font-bold">{orderList.length}</p>
               </div>
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -118,13 +133,13 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
               <CardTitle>Order History</CardTitle>
             </CardHeader>
             <CardContent>
-              {!orders || orders.length === 0 ? (
+              {orderList.length === 0 ? (
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   No orders yet
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {orders.map((order) => (
+                  {orderList.map((order) => (
                     <Link
                       key={order.id}
                       href={`/admin/orders/${order.id}`}
@@ -149,14 +164,14 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
             </CardContent>
           </Card>
 
-          {addresses && addresses.length > 0 && (
+          {addressList.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Addresses</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {addresses.map((addr) => (
+                  {addressList.map((addr) => (
                     <div
                       key={addr.id}
                       className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"

@@ -7,6 +7,9 @@ export type Json =
   | Json[]
 
 export interface Database {
+  __InternalSupabase: {
+    PostgrestVersion: "12"
+  }
   public: {
     Tables: {
       profiles: {
@@ -46,6 +49,7 @@ export interface Database {
           parent_id: string | null
           sort_order: number
           is_active: boolean
+          image_url: string | null
           created_at: string
           updated_at: string
         }
@@ -56,6 +60,7 @@ export interface Database {
           parent_id?: string | null
           sort_order?: number
           is_active?: boolean
+          image_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -66,6 +71,7 @@ export interface Database {
           parent_id?: string | null
           sort_order?: number
           is_active?: boolean
+          image_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -584,7 +590,7 @@ export interface Database {
       email_logs: {
         Row: {
           id: string
-          to: string
+          to_email: string
           subject: string
           status: string
           message_id: string | null
@@ -594,9 +600,9 @@ export interface Database {
         }
         Insert: {
           id?: string
-          to: string
+          to_email: string
           subject: string
-          status: string
+          status?: string
           message_id?: string | null
           error?: string | null
           dedup_key?: string | null
@@ -604,7 +610,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          to?: string
+          to_email?: string
           subject?: string
           status?: string
           message_id?: string | null

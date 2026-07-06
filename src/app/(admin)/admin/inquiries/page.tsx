@@ -3,8 +3,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { updateInquiryStatus } from "@/lib/admin/actions"
+import type { Database } from "@/types/database"
 
 export const dynamic = "force-dynamic"
+
+type Inquiry = Database["public"]["Tables"]["inquiries"]["Row"]
 
 export default async function InquiriesPage() {
   const supabase = createAdminClient()
@@ -13,6 +16,8 @@ export default async function InquiriesPage() {
     .from("inquiries")
     .select("*")
     .order("created_at", { ascending: false })
+
+  const list = (inquiries ?? []) as Inquiry[]
 
   const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     new: { label: "New", variant: "destructive" },
@@ -32,14 +37,14 @@ export default async function InquiriesPage() {
       </div>
 
       <div className="space-y-4">
-        {!inquiries || inquiries.length === 0 ? (
+        {list.length === 0 ? (
           <Card>
             <CardContent className="px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
               No inquiries yet
             </CardContent>
           </Card>
         ) : (
-          inquiries.map((inquiry) => {
+          list.map((inquiry) => {
             const status = statusConfig[inquiry.status] ?? statusConfig.new
             return (
               <Card key={inquiry.id}>

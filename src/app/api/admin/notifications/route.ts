@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -24,8 +25,10 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
   const unreadOnly = searchParams.get('unread') === 'true';
 
-  let query = supabase
-    .from('notifications')
+  const serviceRole = createServiceRoleClient();
+
+  let query = serviceRole
+    .from('admin_notifications')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -41,8 +44,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
   }
 
-  const { count: unreadCount } = await supabase
-    .from('notifications')
+  const { count: unreadCount } = await serviceRole
+    .from('admin_notifications')
     .select('id', { count: 'exact', head: true })
     .eq('is_read', false);
 
@@ -87,21 +90,38 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  let query = supabase
-    .from('notifications')
-    .update({ is_read: true, read_at: new Date().toISOString() });
+  const serviceRole = createServiceRoleClient();
 
   if (mark_all) {
-    query = query.eq('is_read', false);
+    const { error: updateError } = await (
+      serviceRole.from('admin_notifications') as unknown as {
+        update: (values: Record<string, unknown>) => {
+          eq: (col: string, val: unknown) => Promise<{ error: { message: string } | null }>
+        }
+      }
+    )
+      .update({ is_read: true })
+      .eq('is_read', false);
+
+    if (updateError) {
+      console.error('Failed to mark all notifications as read:', updateError.message);
+      return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 });
+    }
   } else {
-    query = query.in('id', notification_ids);
-  }
+    const { error: updateError } = await (
+      serviceRole.from('admin_notifications') as unknown as {
+        update: (values: Record<string, unknown>) => {
+          in: (col: string, vals: string[]) => Promise<{ error: { message: string } | null }>
+        }
+      }
+    )
+      .update({ is_read: true })
+      .in('id', notification_ids);
 
-  const { error: updateError } = await query;
-
-  if (updateError) {
-    console.error('Failed to mark notifications as read:', updateError.message);
-    return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 });
+    if (updateError) {
+      console.error('Failed to mark notifications as read:', updateError.message);
+      return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ message: 'Notifications marked as read' });

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { businessSettings } from './config';
 import { sendWithRetry, isDuplicate, logEmail } from './service';
 import {
@@ -10,6 +10,32 @@ import {
   orderCancelled,
 } from './templates/order-templates';
 
+type OrderEmailData = {
+  id: string
+  order_number: string
+  customer_email: string
+  customer_name: string
+  total_amount: number
+  currency: string
+  payment_method: string
+  shipping_address: {
+    street?: string
+    city?: string
+    state?: string
+    country?: string
+    postal_code?: string
+  }
+  items: Array<{
+    product_name: string
+    quantity: number
+    unit_price: number
+    total_price: number
+  }>
+  created_at: string
+  shipping_cost?: number
+  notes?: string
+}
+
 type OrderEvent =
   | 'confirmed'
   | 'payment_verified'
@@ -18,20 +44,33 @@ type OrderEvent =
   | 'delivered'
   | 'cancelled';
 
-const templateMap: Record<OrderEvent, (order: any, extra?: any) => Promise<{ subject: string; html: string }>> = {
+const templateMap: Record<OrderEvent, (order: OrderEmailData, extra?: string) => Promise<{ subject: string; html: string }>> = {
   confirmed: (order) => orderConfirmed(order),
   payment_verified: (order) => paymentVerified(order),
-  payment_rejected: (order, reason: string) => paymentRejected(order, reason),
+  payment_rejected: (order, reason?: string) => paymentRejected(order, reason ?? ""),
   shipped: (order) => orderShipped(order),
   delivered: (order) => orderDelivered(order),
   cancelled: (order) => orderCancelled(order),
 };
 
-export async function sendOrderEmail(orderId: string, event: OrderEvent, extra?: any): Promise<boolean> {
-  const supabase = await createClient();
+function getOrderEmail(order: Record<string, unknown>): string {
+  if (typeof order.guest_email === "string") return order.guest_email;
+  if (typeof order.customer_email === "string") return order.customer_email;
+  return '';
+}
 
-  const { data: order, error: fetchError } = await supabase
-    .from('orders')
+export async function sendOrderEmail(orderId: string, event: OrderEvent, extra?: string): Promise<boolean> {
+  const supabase = createServiceRoleClient();
+
+  const { data: order, error: fetchError } = await (
+    supabase.from('orders') as unknown as {
+      select: (cols: string) => {
+        eq: (col: string, val: string) => {
+          single: () => Promise<{ data: Record<string, unknown> | null; error: { message: string } | null }>
+        }
+      }
+    }
+  )
     .select(`
       *,
       order_items (
@@ -50,19 +89,40 @@ export async function sendOrderEmail(orderId: string, event: OrderEvent, extra?:
     return false;
   }
 
-  const emailData = {
-    id: order.id,
-    order_number: order.order_number,
-    customer_email: order.customer_email,
-    customer_name: order.customer_name,
-    total_amount: order.total_amount,
-    currency: order.currency || 'NGN',
-    payment_method: order.payment_method,
-    shipping_address: order.shipping_address || {},
-    items: order.order_items || [],
-    created_at: order.created_at,
-    shipping_cost: order.shipping_cost,
-    notes: order.notes,
+  const customerEmail = getOrderEmail(order);
+  if (!customerEmail) {
+    console.error('No email for order', orderId);
+    return false;
+  }
+
+  const customerName = [order.customer_name, order.customer_last_name]
+    .filter(Boolean)
+    .join(' ');
+
+  const emailData: OrderEmailData = {
+    id: String(order.id),
+    order_number: String(order.order_number),
+    customer_email: customerEmail,
+    customer_name: customerName,
+    total_amount: Number(order.total ?? 0),
+    currency: 'PKR',
+    payment_method: String(order.payment_method ?? ""),
+    shipping_address: {
+      street: order.address as string | undefined,
+      city: order.city as string | undefined,
+      state: order.province as string | undefined,
+      postal_code: order.postal_code as string | undefined,
+      country: 'Pakistan',
+    },
+    items: ((order.order_items as Array<Record<string, unknown>>) || []).map((i) => ({
+      product_name: String(i.product_name ?? ""),
+      quantity: Number(i.quantity ?? 0),
+      unit_price: Number(i.unit_price ?? 0),
+      total_price: Number(i.total_price ?? 0),
+    })),
+    created_at: String(order.created_at ?? ""),
+    shipping_cost: order.shipping != null ? Number(order.shipping) : undefined,
+    notes: order.notes != null ? String(order.notes) : undefined,
   };
 
   const dedupKey = `order-${orderId}-${event}`;
@@ -81,13 +141,13 @@ export async function sendOrderEmail(orderId: string, event: OrderEvent, extra?:
     const { subject, html } = await templateFn(emailData, extra);
 
     const result = await sendWithRetry({
-      to: emailData.customer_email,
+      to: customerEmail,
       subject,
       html,
     });
 
     await logEmail(
-      { to: emailData.customer_email, subject, html },
+      { to: customerEmail, subject, html },
       'sent',
       result.id
     );
@@ -98,7 +158,7 @@ export async function sendOrderEmail(orderId: string, event: OrderEvent, extra?:
     console.error(`Failed to send order email (${event}):`, errorMsg);
 
     await logEmail(
-      { to: emailData.customer_email, subject: `Order ${event}`, html: '' },
+      { to: customerEmail, subject: `Order ${event}`, html: '' },
       'failed',
       undefined,
       errorMsg
@@ -109,10 +169,17 @@ export async function sendOrderEmail(orderId: string, event: OrderEvent, extra?:
 }
 
 export async function sendInquiryConfirmation(inquiryId: string): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
-  const { data: inquiry, error } = await supabase
-    .from('inquiries')
+  const { data: inquiry, error } = await (
+    supabase.from('inquiries') as unknown as {
+      select: (cols: string) => {
+        eq: (col: string, val: string) => {
+          single: () => Promise<{ data: Record<string, unknown> | null; error: { message: string } | null }>
+        }
+      }
+    }
+  )
     .select('*')
     .eq('id', inquiryId)
     .single();
@@ -123,6 +190,12 @@ export async function sendInquiryConfirmation(inquiryId: string): Promise<boolea
   }
 
   const settings = await businessSettings();
+  const customerEmail = String(inquiry.contact ?? "");
+  if (!customerEmail) {
+    console.error('No email for inquiry', inquiryId);
+    return false;
+  }
+
   const dedupKey = `inquiry-confirm-${inquiryId}`;
 
   if (await isDuplicate(dedupKey)) {
@@ -149,14 +222,14 @@ export async function sendInquiryConfirmation(inquiryId: string): Promise<boolea
           <tr>
             <td style="background-color: #ffffff; padding: 40px 30px;">
               <p style="margin: 0 0 20px; font-size: 16px; color: #333333; line-height: 1.5;">
-                Hi <strong>${inquiry.name}</strong>,
+                Hi <strong>${String(inquiry.name ?? "")}</strong>,
               </p>
               <p style="margin: 0 0 20px; font-size: 16px; color: #333333; line-height: 1.5;">
                 Thank you for reaching out to us! We've received your inquiry and our team will get back to you as soon as possible.
               </p>
               <div style="background-color: #f8f9fa; border-left: 4px solid #e94560; padding: 16px 20px; margin: 20px 0; border-radius: 0 4px 4px 0;">
                 <p style="margin: 0 0 4px; font-weight: 600; font-size: 14px;">Your Message</p>
-                <p style="margin: 0; font-size: 14px; color: #666666;">${inquiry.message}</p>
+                <p style="margin: 0; font-size: 14px; color: #666666;">${String(inquiry.message ?? "")}</p>
               </div>
               <p style="margin: 20px 0 0; font-size: 14px; color: #666666; line-height: 1.5;">
                 We typically respond within 24-48 hours. If your matter is urgent, please call us at ${settings.storePhone || 'our customer support line'}.
@@ -180,13 +253,13 @@ export async function sendInquiryConfirmation(inquiryId: string): Promise<boolea
 
   try {
     const result = await sendWithRetry({
-      to: inquiry.email,
+      to: customerEmail,
       subject: `We received your message - ${settings.storeName}`,
       html,
     });
 
     await logEmail(
-      { to: inquiry.email, subject: `We received your message - ${settings.storeName}`, html },
+      { to: customerEmail, subject: `We received your message - ${settings.storeName}`, html },
       'sent',
       result.id
     );
@@ -197,7 +270,7 @@ export async function sendInquiryConfirmation(inquiryId: string): Promise<boolea
     console.error('Failed to send inquiry confirmation:', errorMsg);
 
     await logEmail(
-      { to: inquiry.email, subject: 'Inquiry Confirmation', html },
+      { to: customerEmail, subject: 'Inquiry Confirmation', html },
       'failed',
       undefined,
       errorMsg
@@ -217,15 +290,20 @@ export async function sendNewOrderAlert(order: {
   payment_method: string;
 }): Promise<boolean> {
   const settings = await businessSettings();
-  const adminEmail = process.env.ADMIN_EMAIL || settings.storeEmail;
+  const adminEmail = process.env.NOTIFICATION_EMAIL || settings.storeEmail;
+
+  if (!adminEmail) {
+    console.error('No admin email configured');
+    return false;
+  }
 
   const dedupKey = `new-order-alert-${order.id}`;
   if (await isDuplicate(dedupKey)) {
     return true;
   }
 
-  const formatCurrency = (amount: number, currency: string = 'NGN') =>
-    new Intl.NumberFormat('en-NG', {
+  const formatCurrency = (amount: number, currency: string = 'PKR') =>
+    new Intl.NumberFormat('en-PK', {
       style: 'currency',
       currency,
       minimumFractionDigits: 0,
@@ -272,14 +350,6 @@ export async function sendNewOrderAlert(order: {
                   <td style="padding: 10px 12px; font-size: 14px; text-transform: capitalize;">${order.payment_method.replace('_', ' ')}</td>
                 </tr>
               </table>
-              <a href="${settings.storeWebsite}/admin/orders/${order.id}" style="display: inline-block; padding: 14px 32px; background-color: #e94560; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; margin: 24px 0;">
-                View Order
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #1a1a2e; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px;">
-              <p style="color: #666666; margin: 0; font-size: 13px;">${settings.storeName} Admin</p>
             </td>
           </tr>
         </table>
@@ -293,7 +363,7 @@ export async function sendNewOrderAlert(order: {
   try {
     const result = await sendWithRetry({
       to: adminEmail,
-      subject: `New Order #${order.order_number} - ${formatCurrency(order.total_amount, order.currency)}`,
+      subject: `New Order #${order.order_number}`,
       html,
     });
 

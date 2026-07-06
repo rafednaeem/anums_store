@@ -64,7 +64,7 @@ export default function ProductDetailContent({ product }: ProductDetailProps) {
   const [relatedProducts, setRelatedProducts] = useState<unknown[]>([])
 
   const uniqueSizes = useMemo(() => {
-    return [...new Set(product.variants.map((v) => v.size))]
+    return Array.from(new Set(product.variants.map((v) => v.size)))
   }, [product.variants])
 
   const uniqueColors = useMemo(() => {

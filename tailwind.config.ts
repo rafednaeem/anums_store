@@ -6,6 +6,7 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -20,11 +21,26 @@ const config: Config = {
         },
         background: "var(--background)",
         foreground: "var(--foreground)",
+        primary: "var(--primary)",
+        "primary-foreground": "var(--primary-foreground)",
+        secondary: "var(--secondary)",
+        "secondary-foreground": "var(--secondary-foreground)",
+        accent: "var(--accent)",
+        "accent-foreground": "var(--accent-foreground)",
+        muted: "var(--muted)",
+        "muted-foreground": "var(--muted-foreground)",
+        border: "var(--border)",
+        ring: "var(--ring)",
+        destructive: "var(--destructive)",
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
         heading: ["var(--font-cormorant)", "Georgia", "serif"],
-        body:    ["var(--font-geist-sans)", "sans-serif"],
-        mono:    ["var(--font-geist-mono)", "monospace"],
       },
       backgroundImage: {
         "star-pattern": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cg transform='translate(22,22)'%3E%3Cpath d='M0,-7 L1.8,-1.8 L7,0 L1.8,1.8 L0,7 L-1.8,1.8 L-7,0 L-1.8,-1.8 Z' fill='none' stroke='%23C8C2BA' stroke-width='0.7'/%3E%3C/g%3E%3C/svg%3E\")",

@@ -3,8 +3,12 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { formatPrice } from "@/lib/helpers"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import type { Database } from "@/types/database"
 
 export const dynamic = "force-dynamic"
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"]
+type OrderStat = { user_id: string | null; total: number | null }
 
 export default async function CustomersPage() {
   const supabase = createAdminClient()
@@ -15,17 +19,20 @@ export default async function CustomersPage() {
     .eq("role", "customer")
     .order("created_at", { ascending: false })
 
-  const customerIds = customers?.map((c) => c.id) ?? []
+  const customerList = (customers ?? []) as Profile[]
+  const customerIds = customerList.map((c) => c.id)
 
-  const { data: orderStats } = customerIds.length > 0
-    ? await supabase
-        .from("orders")
-        .select("user_id, total")
-        .in("user_id", customerIds)
-    : { data: [] }
+  let orderStats: OrderStat[] = []
+  if (customerIds.length > 0) {
+    const { data } = await supabase
+      .from("orders")
+      .select("user_id, total")
+      .in("user_id", customerIds)
+    orderStats = (data ?? []) as OrderStat[]
+  }
 
   const statsMap = new Map<string, { count: number; total: number }>()
-  orderStats?.forEach((o) => {
+  orderStats.forEach((o) => {
     if (!o.user_id) return
     const existing = statsMap.get(o.user_id) ?? { count: 0, total: 0 }
     existing.count++
@@ -71,14 +78,17 @@ export default async function CustomersPage() {
                 </tr>
               </thead>
               <tbody>
-                {!customers || customers.length === 0 ? (
+                {customerList.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400">
+                    <td
+                      colSpan={6}
+                      className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400"
+                    >
                       No customers found
                     </td>
                   </tr>
                 ) : (
-                  customers.map((customer) => {
+                  customerList.map((customer) => {
                     const stat = statsMap.get(customer.id) ?? { count: 0, total: 0 }
                     return (
                       <tr

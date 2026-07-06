@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Package, MapPin, Heart, LogOut, User } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import AuthGuard from "@/components/shared/AuthGuard"
 import { Button } from "@/components/ui/button"
+
+export const dynamic = "force-dynamic"
 
 interface Profile {
   full_name: string | null
@@ -16,9 +18,11 @@ interface Profile {
 
 export default function AccountPage() {
   return (
-    <AuthGuard>
-      <AccountContent />
-    </AuthGuard>
+    <Suspense fallback={null}>
+      <AuthGuard>
+        <AccountContent />
+      </AuthGuard>
+    </Suspense>
   )
 }
 

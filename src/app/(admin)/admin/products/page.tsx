@@ -6,8 +6,16 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton"
+import type { Database } from "@/types/database"
 
 export const dynamic = "force-dynamic"
+
+type Product = Pick<
+  Database["public"]["Tables"]["products"]["Row"],
+  "id" | "name" | "slug" | "price" | "inventory_count" | "is_active" | "cover_url" | "category_id"
+>
+type Category = Pick<Database["public"]["Tables"]["categories"]["Row"], "name">
 
 export default async function ProductsPage() {
   const supabase = createAdminClient()
@@ -16,6 +24,8 @@ export default async function ProductsPage() {
     .from("products")
     .select("id, name, slug, price, inventory_count, is_active, cover_url, category_id, categories(name)")
     .order("created_at", { ascending: false })
+
+  const productList = (products ?? []) as Array<Product & { categories: Category | Category[] | null }>
 
   return (
     <div className="space-y-6">
@@ -63,15 +73,21 @@ export default async function ProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {!products || products.length === 0 ? (
+                {productList.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400">
+                    <td
+                      colSpan={6}
+                      className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400"
+                    >
                       No products found
                     </td>
                   </tr>
                 ) : (
-                  products.map((product) => {
-                    const cat = product.categories as { name: string } | null
+                  productList.map((product) => {
+                    const catRaw = product.categories
+                    const cat = Array.isArray(catRaw)
+                      ? (catRaw[0] as Category | undefined) ?? null
+                      : catRaw
                     return (
                       <tr
                         key={product.id}
@@ -86,6 +102,7 @@ export default async function ProductsPage() {
                                 width={40}
                                 height={40}
                                 className="h-10 w-10 rounded-md object-cover"
+                                unoptimized={product.cover_url.includes("supabase")}
                               />
                             ) : (
                               <div className="flex h-10 w-10 items-center justify-center rounded-md bg-neutral-100 dark:bg-neutral-800">
@@ -118,12 +135,15 @@ export default async function ProductsPage() {
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Link
-                            href={`/admin/products/${product.id}/edit`}
-                            className="text-sm font-medium text-neutral-900 hover:underline dark:text-neutral-50"
-                          >
-                            Edit
-                          </Link>
+                          <div className="flex items-center justify-end gap-3">
+                            <Link
+                              href={`/admin/products/${product.id}/edit`}
+                              className="text-sm font-medium text-neutral-900 hover:underline dark:text-neutral-50"
+                            >
+                              Edit
+                            </Link>
+                            <DeleteProductButton id={product.id} name={product.name} />
+                          </div>
                         </td>
                       </tr>
                     )

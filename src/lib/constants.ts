@@ -4,16 +4,6 @@ export const storeEmail = process.env.NEXT_PUBLIC_STORE_EMAIL || "info@anumsstor
 export const storePhone = process.env.NEXT_PUBLIC_STORE_PHONE || "+923224183457"
 export const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "923224183457"
 
-export const COD_CITIES = [
-  "Lahore",
-  "Karachi",
-  "Islamabad",
-  "Faisalabad",
-  "Sialkot",
-  "Multan",
-  "Gujranwala",
-] as const
-
 export const PROVINCES = [
   "Punjab",
   "Sindh",

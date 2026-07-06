@@ -1,11 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { updateReviewStatus } from "@/lib/admin/actions"
 import { Star } from "lucide-react"
+import type { Database } from "@/types/database"
 
 export const dynamic = "force-dynamic"
+
+type Review = Database["public"]["Tables"]["reviews"]["Row"]
+type ProductName = Pick<Database["public"]["Tables"]["products"]["Row"], "name">
 
 export default async function ReviewsPage() {
   const supabase = createAdminClient()
@@ -15,12 +19,17 @@ export default async function ReviewsPage() {
     .select("*, products(name)")
     .order("created_at", { ascending: false })
 
-  const pending = reviews?.filter((r) => r.status === "pending") ?? []
-  const approved = reviews?.filter((r) => r.status === "approved") ?? []
-  const rejected = reviews?.filter((r) => r.status === "rejected") ?? []
+  const list = (reviews ?? []) as Array<Review & { products: ProductName | ProductName[] | null }>
 
-  function renderReview(review: typeof reviews extends (infer T)[] | null ? T : never) {
-    const product = review.products as { name: string } | null
+  const pending = list.filter((r) => r.status === "pending")
+  const approved = list.filter((r) => r.status === "approved")
+  const rejected = list.filter((r) => r.status === "rejected")
+
+  function renderReview(review: Review & { products: ProductName | ProductName[] | null }) {
+    const productRaw = review.products
+    const product = Array.isArray(productRaw)
+      ? productRaw[0] ?? null
+      : productRaw
     return (
       <div
         key={review.id}
@@ -35,8 +44,8 @@ export default async function ReviewsPage() {
                   review.status === "approved"
                     ? "default"
                     : review.status === "rejected"
-                    ? "destructive"
-                    : "secondary"
+                      ? "destructive"
+                      : "secondary"
                 }
               >
                 {review.status}
@@ -109,9 +118,7 @@ export default async function ReviewsPage() {
               <h2 className="text-lg font-semibold">Pending</h2>
               <Badge variant="secondary">{pending.length}</Badge>
             </div>
-            <div className="space-y-4">
-              {pending.map(renderReview)}
-            </div>
+            <div className="space-y-4">{pending.map(renderReview)}</div>
           </div>
         )}
 
@@ -121,9 +128,7 @@ export default async function ReviewsPage() {
               <h2 className="text-lg font-semibold">Approved</h2>
               <Badge variant="default">{approved.length}</Badge>
             </div>
-            <div className="space-y-4">
-              {approved.map(renderReview)}
-            </div>
+            <div className="space-y-4">{approved.map(renderReview)}</div>
           </div>
         )}
 
@@ -133,13 +138,11 @@ export default async function ReviewsPage() {
               <h2 className="text-lg font-semibold">Rejected</h2>
               <Badge variant="destructive">{rejected.length}</Badge>
             </div>
-            <div className="space-y-4">
-              {rejected.map(renderReview)}
-            </div>
+            <div className="space-y-4">{rejected.map(renderReview)}</div>
           </div>
         )}
 
-        {reviews?.length === 0 && (
+        {list.length === 0 && (
           <Card>
             <CardContent className="px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
               No reviews yet

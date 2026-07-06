@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { sendOrderEmail } from '@/lib/email';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -50,8 +50,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const { data: order, error: fetchError } = await supabase
-    .from('orders')
+  const serviceRole = createServiceRoleClient();
+
+  const { data: order, error: fetchError } = await (
+    serviceRole.from('orders') as unknown as {
+      select: (cols: string) => {
+        eq: (col: string, val: string) => {
+          single: () => Promise<{ data: Record<string, unknown> | null; error: { message: string } | null }>
+        }
+      }
+    }
+  )
     .select('*')
     .eq('id', id)
     .single();
@@ -61,47 +70,69 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const newPaymentStatus = action === 'verify' ? 'verified' : 'rejected';
-  const newOrderStatus = action === 'verify' ? 'confirmed' : order.status;
 
-  const { error: paymentUpdateError } = await supabase
-    .from('orders')
+  const { error: paymentUpdateError } = await (
+    serviceRole.from('payments') as unknown as {
+      update: (values: Record<string, unknown>) => {
+        eq: (col: string, val: string) => {
+          eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>
+        }
+      }
+    }
+  )
     .update({
-      payment_status: newPaymentStatus,
-      status: newOrderStatus,
-      payment_verified_at: action === 'verify' ? new Date().toISOString() : null,
+      status: newPaymentStatus,
+      verified_by: user.id,
+      verified_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      rejection_reason: action === 'reject' ? rejection_reason.trim() : null,
     })
-    .eq('id', id);
+    .eq('order_id', id)
+    .eq('status', 'submitted');
 
   if (paymentUpdateError) {
     console.error('Failed to update payment status:', paymentUpdateError.message);
     return NextResponse.json({ error: 'Failed to update payment status' }, { status: 500 });
   }
 
-  const { error: timelineError } = await supabase.from('order_timeline').insert({
+  const newOrderStatus =
+    action === 'verify' ? 'payment_verified' : 'payment_rejected';
+
+  const { error: orderUpdateError } = await (
+    serviceRole.from('orders') as unknown as {
+      update: (values: Record<string, unknown>) => {
+        eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>
+      }
+    }
+  )
+    .update({
+      payment_status: newPaymentStatus,
+      status: newOrderStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (orderUpdateError) {
+    console.error('Failed to update order status:', orderUpdateError.message);
+  }
+
+  const { error: timelineError } = await (
+    serviceRole.from('order_timeline') as unknown as {
+      insert: (values: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
+    }
+  ).insert({
     order_id: id,
-    event: `payment_${action}`,
-    details: {
-      previous_payment_status: order.payment_status,
-      new_payment_status: newPaymentStatus,
-      previous_order_status: order.status,
-      new_order_status: newOrderStatus,
-      rejection_reason: action === 'reject' ? rejection_reason.trim() : null,
-      verified_by: user.id,
-    },
-    created_at: new Date().toISOString(),
+    status: newOrderStatus,
+    note:
+      action === 'verify'
+        ? 'Payment verified by admin'
+        : `Payment rejected: ${rejection_reason.trim()}`,
+    created_by: user.id,
   });
 
   if (timelineError) {
     console.error('Failed to insert timeline entry:', timelineError.message);
   }
-
-  const emailEvent = action === 'verify' ? 'payment_verified' : 'payment_rejected';
-  sendOrderEmail(id, emailEvent, action === 'reject' ? rejection_reason.trim() : undefined).catch(
-    (err) => {
-      console.error('Failed to send payment verification email:', err);
-    }
-  );
 
   return NextResponse.json({
     message: `Payment ${action === 'verify' ? 'verified' : 'rejected'} successfully`,

@@ -4,10 +4,20 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { checkoutSchema } from "@/lib/validations"
 import { rateLimit } from "@/lib/rate-limit"
 import { generateOrderNumber } from "@/lib/seo"
-import { getSettings, extractSettings } from "@/lib/settings"
+import { getSettings } from "@/lib/settings"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any
+
+const PROVINCE_TO_SETTING_KEY: Record<string, string> = {
+  Punjab: "shipping_rate_punjab",
+  Sindh: "shipping_rate_sindh",
+  "Khyber Pakhtunkhwa": "shipping_rate_kpk",
+  Balochistan: "shipping_rate_balochistan",
+  "Islamabad Capital Territory": "shipping_rate_islamabad",
+  "Azad Jammu & Kashmir": "shipping_rate_ajk",
+  "Gilgit-Baltistan": "shipping_rate_gb",
+}
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown"
@@ -33,7 +43,7 @@ export async function POST(req: Request) {
     if (!validationResult.success) {
       const firstError = validationResult.error.errors[0]
       return NextResponse.json(
-        { error: firstError.message },
+        { error: firstError?.message ?? "Validation failed" },
         { status: 400 }
       )
     }
@@ -51,7 +61,7 @@ export async function POST(req: Request) {
         .from("orders")
         .select("id, order_number")
         .eq("idempotency_key", body.idempotency_key)
-        .single()
+        .maybeSingle()
 
       if (existingOrder) {
         return NextResponse.json({
@@ -139,22 +149,42 @@ export async function POST(req: Request) {
       }
     })
 
-    const settings = extractSettings(await getSettings())
-    const subtotal = validatedItems.reduce((sum: number, item: Any) => sum + item.total_price, 0)
-    const shipping = subtotal >= settings.freeShippingThreshold ? 0 : settings.defaultShippingRate
+    const allSettings = await getSettings()
+    const subtotal = validatedItems.reduce(
+      (sum: number, item: Any) => sum + item.total_price,
+      0
+    )
+    const freeShippingThreshold = Number(allSettings.free_shipping_threshold) || 10000
+    const defaultShippingRate = Number(allSettings.default_shipping_rate) || 500
+
+    let shipping = 0
+    if (subtotal < freeShippingThreshold) {
+      const provinceKey = PROVINCE_TO_SETTING_KEY[body.shipping.province]
+      const provinceRate = provinceKey
+        ? Number(allSettings[provinceKey])
+        : NaN
+      shipping = Number.isFinite(provinceRate) && provinceRate > 0
+        ? provinceRate
+        : defaultShippingRate
+    }
+
     const total = subtotal + shipping
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     const orderNumber = generateOrderNumber()
+    const fullName = String(body.shipping.full_name || "").trim()
+    const nameParts = fullName.split(/\s+/)
+    const firstName = nameParts[0] || fullName
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : ""
 
     const orderData = {
       order_number: orderNumber,
       user_id: user?.id || null,
       guest_email: body.shipping.guest_email || null,
-      customer_name: body.shipping.full_name,
-      customer_last_name: "",
+      customer_name: firstName,
+      customer_last_name: lastName,
       phone: body.shipping.phone,
       address: [body.shipping.address_line1, body.shipping.address_line2]
         .filter(Boolean)
@@ -162,12 +192,12 @@ export async function POST(req: Request) {
       city: body.shipping.city,
       province: body.shipping.province,
       postal_code: body.shipping.postal_code || null,
-      items: validatedItems,
+      items: validatedItems as unknown as Any,
       subtotal,
       shipping,
       total,
-      payment_method: body.payment_method,
-      payment_status: "pending",
+      payment_method: "bank_transfer",
+      payment_status: body.payment_proof_url ? "submitted" : "pending",
       status: "new",
       notes: body.notes || null,
       idempotency_key: body.idempotency_key || null,
@@ -205,10 +235,11 @@ export async function POST(req: Request) {
 
     const paymentRecord = {
       order_id: order.id,
-      method: body.payment_method,
+      method: "bank_transfer",
       amount: total,
       status: body.payment_proof_url ? "submitted" : "pending",
       proof_url: body.payment_proof_url || null,
+      proof_filename: body.payment_proof_filename || null,
     }
 
     await serviceRole.from("payments").insert(paymentRecord)
@@ -229,7 +260,12 @@ export async function POST(req: Request) {
       if (currentProduct) {
         await serviceRole
           .from("products")
-          .update({ inventory_count: Math.max(0, currentProduct.inventory_count - item.quantity) })
+          .update({
+            inventory_count: Math.max(
+              0,
+              currentProduct.inventory_count - item.quantity
+            ),
+          })
           .eq("id", item.product_id)
       }
 
@@ -243,7 +279,12 @@ export async function POST(req: Request) {
         if (currentVariant) {
           await serviceRole
             .from("product_variants")
-            .update({ inventory_count: Math.max(0, currentVariant.inventory_count - item.quantity) })
+            .update({
+              inventory_count: Math.max(
+                0,
+                currentVariant.inventory_count - item.quantity
+              ),
+            })
             .eq("id", item.variant_id)
         }
       }
@@ -253,7 +294,7 @@ export async function POST(req: Request) {
       await serviceRole.from("addresses").insert({
         user_id: user.id,
         label: body.shipping.address_label || "Home",
-        full_name: body.shipping.full_name,
+        full_name: fullName,
         phone: body.shipping.phone,
         address_line1: body.shipping.address_line1,
         address_line2: body.shipping.address_line2 || null,

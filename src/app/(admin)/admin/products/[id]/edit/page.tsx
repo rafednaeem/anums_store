@@ -27,25 +27,33 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
 
   const productData = product as ProductRow
 
-  const { data: images } = await supabase
-    .from("product_images")
-    .select("image_url")
-    .eq("product_id", id)
-    .order("sort_order", { ascending: true })
+  const [{ data: images }, { data: variants }, { data: categories }] =
+    await Promise.all([
+      supabase
+        .from("product_images")
+        .select("image_url")
+        .eq("product_id", id)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("product_variants")
+        .select("size, color, color_hex, inventory_count")
+        .eq("product_id", id),
+      supabase
+        .from("categories")
+        .select("id, name")
+        .order("name", { ascending: true }),
+    ])
 
   const imageRows = (images ?? []) as Pick<ImageRow, "image_url">[]
+  const variantRows = (variants ?? []) as Pick<
+    VariantRow,
+    "size" | "color" | "color_hex" | "inventory_count"
+  >[]
 
-  const { data: variants } = await supabase
-    .from("product_variants")
-    .select("size, color, color_hex")
-    .eq("product_id", id)
-
-  const variantRows = (variants ?? []) as Pick<VariantRow, "size" | "color" | "color_hex">[]
-
-  const sizes = variantRows.map((v) => v.size).filter((v, i, a) => a.indexOf(v) === i)
+  const sizes = variantRows.map((v) => v.size).filter((v, i, a) => a.indexOf(v) === i && v !== "Default")
   const colorMap = new Map<string, string>()
   variantRows.forEach((v) => {
-    if (v.color_hex) colorMap.set(v.color, v.color_hex)
+    if (v.color !== "Default" && v.color_hex) colorMap.set(v.color, v.color_hex)
   })
   const colors = Array.from(colorMap.entries()).map(([name, hex]) => ({ name, hex }))
 
@@ -60,6 +68,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         </p>
       </div>
       <ProductForm
+        categories={categories ?? []}
         initialData={{
           id: productData.id,
           name: productData.name,
@@ -67,8 +76,8 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           description: productData.description ?? undefined,
           category_id: productData.category_id ?? undefined,
           price: productData.price,
-          compare_price: productData.compare_price,
-          sale_price: productData.sale_price,
+          compare_price: productData.compare_price ?? null,
+          sale_price: productData.sale_price ?? null,
           inventory_count: productData.inventory_count,
           craft_type: productData.craft_type ?? undefined,
           cover_url: productData.cover_url,

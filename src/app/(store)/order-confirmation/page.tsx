@@ -170,7 +170,7 @@ async function OrderDetails({ orderId }: { orderId: string }) {
           <div className="py-4">
             <h2 className="text-sm font-semibold text-ethereal-dark">Payment</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Method: {orderData.payment_method === "bank_transfer" ? "Bank Transfer" : "Cash on Delivery"}
+              Method: Bank Transfer
             </p>
             {payment?.proof_url && (
               <a

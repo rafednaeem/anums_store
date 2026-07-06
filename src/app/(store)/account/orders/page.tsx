@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { Package, ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import AuthGuard from "@/components/shared/AuthGuard"
 import { formatPrice } from "@/lib/helpers"
 import { ORDER_STATUS_LABELS } from "@/lib/constants"
+
+export const dynamic = "force-dynamic"
 
 interface Order {
   id: string
@@ -18,9 +20,11 @@ interface Order {
 
 export default function OrdersPage() {
   return (
-    <AuthGuard>
-      <OrdersContent />
-    </AuthGuard>
+    <Suspense fallback={null}>
+      <AuthGuard>
+        <OrdersContent />
+      </AuthGuard>
+    </Suspense>
   )
 }
 

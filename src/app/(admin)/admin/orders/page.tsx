@@ -4,6 +4,7 @@ import { formatPrice } from "@/lib/helpers"
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/constants"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -11,10 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
+import type { Database } from "@/types/database"
 
 export const dynamic = "force-dynamic"
+
+type OrderRow = Pick<
+  Database["public"]["Tables"]["orders"]["Row"],
+  | "id"
+  | "order_number"
+  | "customer_name"
+  | "customer_last_name"
+  | "phone"
+  | "total"
+  | "status"
+  | "payment_status"
+  | "items"
+  | "created_at"
+>
 
 interface OrdersPageProps {
   searchParams: Promise<{
@@ -30,7 +45,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
 
   let query = supabase
     .from("orders")
-    .select("id, order_number, customer_name, customer_last_name, phone, total, status, payment_status, items, created_at")
+    .select(
+      "id, order_number, customer_name, customer_last_name, phone, total, status, payment_status, items, created_at"
+    )
 
   if (params.status && params.status !== "all") {
     query = query.eq("status", params.status)
@@ -45,25 +62,13 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   query = query.order("created_at", { ascending: false })
 
   const { data: orders } = await query
+  const orderList = (orders ?? []) as OrderRow[]
 
-  function buildUrl(overrides: Record<string, string | undefined>) {
-    const sp = new URLSearchParams()
-    if (overrides.status && overrides.status !== "all") sp.set("status", overrides.status)
-    if (overrides.payment_status && overrides.payment_status !== "all")
-      sp.set("payment_status", overrides.payment_status)
-    if (overrides.q) sp.set("q", overrides.q)
-    return `/admin/orders?${sp.toString()}`
+  const filters = {
+    status: params.status ?? "all",
+    payment_status: params.payment_status ?? "all",
+    q: params.q ?? "",
   }
-
-  function currentFilters() {
-    return {
-      status: params.status ?? "all",
-      payment_status: params.payment_status ?? "all",
-      q: params.q ?? "",
-    }
-  }
-
-  const filters = currentFilters()
 
   return (
     <div className="space-y-6">
@@ -92,10 +97,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
               />
             </div>
 
-            <Select
-              name="status"
-              defaultValue={filters.status}
-            >
+            <Select name="status" defaultValue={filters.status}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
@@ -166,17 +168,20 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {!orders || orders.length === 0 ? (
+                {orderList.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400">
+                    <td
+                      colSpan={7}
+                      className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400"
+                    >
                       No orders found
                     </td>
                   </tr>
                 ) : (
-                  orders.map((order) => {
-                    const items = (order.items ?? []) as { quantity?: number }[]
+                  orderList.map((order) => {
+                    const items = (order.items ?? []) as Array<{ quantity?: number }>
                     const itemCount = items.reduce(
-                      (sum: number, item: { quantity?: number }) => sum + (item.quantity ?? 1),
+                      (sum, item) => sum + (item.quantity ?? 1),
                       0
                     )
                     return (
@@ -193,7 +198,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                           </Link>
                         </td>
                         <td className="px-4 py-3">
-                          <div>{order.customer_name} {order.customer_last_name}</div>
+                          <div>
+                            {order.customer_name} {order.customer_last_name}
+                          </div>
                           <div className="text-xs text-neutral-500 dark:text-neutral-400">
                             {order.phone}
                           </div>
@@ -205,11 +212,12 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                         <td className="px-4 py-3 text-center">
                           <Badge
                             variant={
-                              order.payment_status === "verified" || order.payment_status === "paid"
+                              order.payment_status === "verified" ||
+                              order.payment_status === "paid"
                                 ? "default"
                                 : order.payment_status === "rejected"
-                                ? "destructive"
-                                : "secondary"
+                                  ? "destructive"
+                                  : "secondary"
                             }
                           >
                             {PAYMENT_STATUS_LABELS[order.payment_status] ??

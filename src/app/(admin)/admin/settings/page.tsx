@@ -1,8 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SettingsForm } from "./SettingsForm"
 
 export const dynamic = "force-dynamic"
+
+type SiteSetting = {
+  key: string
+  value: string
+}
 
 export default async function SettingsPage() {
   const supabase = createAdminClient()
@@ -11,10 +15,15 @@ export default async function SettingsPage() {
     .from("site_settings")
     .select("key, value")
 
-  const settings = (data ?? []).reduce((acc, row) => {
-    acc[row.key] = row.value
-    return acc
-  }, {} as Record<string, string>)
+  const list = (data ?? []) as SiteSetting[]
+
+  const settings = list.reduce(
+    (acc, row) => {
+      acc[row.key] = row.value
+      return acc
+    },
+    {} as Record<string, string>
+  )
 
   return (
     <div className="space-y-6">

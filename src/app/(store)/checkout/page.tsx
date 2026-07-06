@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -12,7 +12,6 @@ import {
   ChevronRight,
   Upload,
   Building2,
-  AlertCircle,
   Loader2,
 } from "lucide-react"
 import { z } from "zod"
@@ -114,8 +113,6 @@ const PK_CITIES = [
   "Rawalakot",
 ]
 
-const COD_ALLOWED_CITIES = ["Lahore", "Karachi", "Islamabad", "Faisalabad"]
-
 const STEPS = [
   { id: 1, label: "Shipping", icon: MapPin },
   { id: 2, label: "Payment", icon: CreditCard },
@@ -124,7 +121,6 @@ const STEPS = [
 ]
 
 const checkoutFormSchema = shippingSchema.extend({
-  payment_method: z.enum(["bank_transfer", "cod"]).optional(),
   notes: z.string().optional(),
 })
 
@@ -141,11 +137,20 @@ interface ShippingInfo {
   guest_email?: string
 }
 
+const PROVINCE_SHIPPING_KEYS: Record<string, string> = {
+  Punjab: "shipping_rate_punjab",
+  Sindh: "shipping_rate_sindh",
+  "Khyber Pakhtunkhwa": "shipping_rate_kpk",
+  Balochistan: "shipping_rate_balochistan",
+  "Islamabad Capital Territory": "shipping_rate_islamabad",
+  "Azad Jammu & Kashmir": "shipping_rate_ajk",
+  "Gilgit-Baltistan": "shipping_rate_gb",
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, clearCart } = useCart()
   const [step, setStep] = useState(1)
-  const [paymentMethod, setPaymentMethod] = useState<"bank_transfer" | "cod">("bank_transfer")
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [paymentProofUrl, setPaymentProofUrl] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -159,14 +164,16 @@ export default function CheckoutPage() {
     accountNumber: "",
     iban: "",
   })
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(10000)
+  const [defaultShippingRate, setDefaultShippingRate] = useState(500)
+  const [provinceShippingRates, setProvinceShippingRates] = useState<
+    Record<string, number>
+  >({})
   const [isUploadingProof, setIsUploadingProof] = useState(false)
 
   const supabase = createClient()
 
-  const freeShippingThreshold = 10000
-  const defaultShippingRate = 500
-
-  const { subtotal, shipping, total } = calculateOrderTotals(
+  const { subtotal } = calculateOrderTotals(
     items.map((i) => ({ price: i.price, quantity: i.quantity })),
     freeShippingThreshold,
     defaultShippingRate
@@ -192,7 +199,17 @@ export default function CheckoutPage() {
     },
   })
 
-  const watchedCity = watch("city")
+  const watchedProvince = watch("province")
+
+  const calculatedShipping = (() => {
+    if (subtotal >= freeShippingThreshold) return 0
+    if (watchedProvince && provinceShippingRates[watchedProvince] != null) {
+      return provinceShippingRates[watchedProvince]
+    }
+    return defaultShippingRate
+  })()
+
+  const calculatedTotal = subtotal + calculatedShipping
 
   useEffect(() => {
     async function loadAddresses() {
@@ -209,19 +226,49 @@ export default function CheckoutPage() {
     }
 
     async function loadSettings() {
+      const keys = [
+        "bank_name",
+        "bank_account_title",
+        "bank_account",
+        "bank_iban",
+        "free_shipping_threshold",
+        "default_shipping_rate",
+        "shipping_rate_punjab",
+        "shipping_rate_sindh",
+        "shipping_rate_kpk",
+        "shipping_rate_balochistan",
+        "shipping_rate_islamabad",
+        "shipping_rate_ajk",
+        "shipping_rate_gb",
+      ]
+
       const { data } = await supabase
         .from("site_settings")
         .select("key, value")
-        .in("key", ["bank_name", "bank_account_title", "bank_account", "bank_iban"])
+        .in("key", keys)
 
       if (data) {
-        const map = data.reduce((acc, r) => ({ ...acc, [r.key]: r.value }), {} as Record<string, string>)
+        const map = data.reduce(
+          (acc, r) => ({ ...acc, [r.key]: r.value }),
+          {} as Record<string, string>
+        )
         setBankDetails({
           bankName: map.bank_name || "",
           accountTitle: map.bank_account_title || "",
           accountNumber: map.bank_account || "",
           iban: map.bank_iban || "",
         })
+        if (map.free_shipping_threshold) {
+          setFreeShippingThreshold(Number(map.free_shipping_threshold) || 10000)
+        }
+        if (map.default_shipping_rate) {
+          setDefaultShippingRate(Number(map.default_shipping_rate) || 500)
+        }
+        const rates: Record<string, number> = {}
+        for (const [province, key] of Object.entries(PROVINCE_SHIPPING_KEYS)) {
+          if (map[key]) rates[province] = Number(map[key])
+        }
+        setProvinceShippingRates(rates)
       }
     }
 
@@ -276,6 +323,10 @@ export default function CheckoutPage() {
   }
 
   function onSubmitStep2() {
+    if (!paymentProofUrl) {
+      toast.error("Please upload your payment proof to continue")
+      return
+    }
     setStep(3)
   }
 
@@ -299,7 +350,7 @@ export default function CheckoutPage() {
             postal_code: formData.postal_code,
             guest_email: formData.guest_email,
           },
-          payment_method: paymentMethod,
+          payment_method: "bank_transfer",
           payment_proof_url: paymentProofUrl,
           notes: formData.notes,
           idempotency_key: idempotencyKey,
@@ -332,10 +383,6 @@ export default function CheckoutPage() {
     }
   }
 
-  const codAvailable = useMemo(() => {
-    return COD_ALLOWED_CITIES.includes(watchedCity)
-  }, [watchedCity])
-
   if (items.length === 0 && step !== 4) {
     return null
   }
@@ -357,11 +404,7 @@ export default function CheckoutPage() {
                     : "bg-ethereal-silver/30 text-muted-foreground"
                 }`}
               >
-                {step > s.id ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  s.id
-                )}
+                {step > s.id ? <CheckCircle2 className="h-4 w-4" /> : s.id}
               </div>
               <span
                 className={`hidden text-sm font-medium sm:inline ${
@@ -392,10 +435,6 @@ export default function CheckoutPage() {
 
         {step === 2 && (
           <PaymentStep
-            paymentMethod={paymentMethod}
-            setPaymentMethod={setPaymentMethod}
-            codAvailable={codAvailable}
-            watchedCity={watchedCity}
             bankDetails={bankDetails}
             onProofUpload={handleProofUpload}
             isUploadingProof={isUploadingProof}
@@ -410,10 +449,9 @@ export default function CheckoutPage() {
           <ReviewStep
             items={items}
             subtotal={subtotal}
-            shipping={shipping}
-            total={total}
+            shipping={calculatedShipping}
+            total={calculatedTotal}
             shippingInfo={watch()}
-            paymentMethod={paymentMethod}
             isSubmitting={isSubmitting}
             onSubmit={onSubmit}
             onBack={() => setStep(2)}
@@ -593,7 +631,11 @@ function ShippingStep({
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" size="lg" className="bg-ethereal-dark text-white hover:bg-ethereal-dark/90">
+        <Button
+          type="submit"
+          size="lg"
+          className="bg-ethereal-dark text-white hover:bg-ethereal-dark/90"
+        >
           Continue to Payment
           <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
@@ -603,10 +645,6 @@ function ShippingStep({
 }
 
 function PaymentStep({
-  paymentMethod,
-  setPaymentMethod,
-  codAvailable,
-  watchedCity,
   bankDetails,
   onProofUpload,
   isUploadingProof,
@@ -615,10 +653,6 @@ function PaymentStep({
   onSubmit,
   onBack,
 }: {
-  paymentMethod: "bank_transfer" | "cod"
-  setPaymentMethod: (m: "bank_transfer" | "cod") => void
-  codAvailable: boolean
-  watchedCity: string
   bankDetails: { bankName: string; accountTitle: string; accountNumber: string; iban: string }
   onProofUpload: (file: File) => void
   isUploadingProof: boolean
@@ -640,111 +674,74 @@ function PaymentStep({
         </h2>
 
         <div className="mt-4 space-y-3">
-          <label
-            className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
-              paymentMethod === "bank_transfer"
-                ? "border-ethereal-dark bg-ethereal-cream"
-                : "border-ethereal-silver/30 hover:border-ethereal-dark/50"
-            }`}
-          >
-            <input
-              type="radio"
-              name="payment_method"
-              value="bank_transfer"
-              checked={paymentMethod === "bank_transfer"}
-              onChange={() => setPaymentMethod("bank_transfer")}
-              className="mt-1"
-            />
-            <div>
-              <p className="font-medium text-ethereal-dark">Bank Transfer</p>
-              <p className="text-sm text-muted-foreground">
-                Transfer the order amount to our bank account and upload proof of payment.
-              </p>
-            </div>
-          </label>
-
-          <label
-            className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
-              !codAvailable
-                ? "cursor-not-allowed border-ethereal-silver/30 opacity-50"
-                : paymentMethod === "cod"
-                ? "border-ethereal-dark bg-ethereal-cream"
-                : "border-ethereal-silver/30 hover:border-ethereal-dark/50"
-            }`}
-          >
-            <input
-              type="radio"
-              name="payment_method"
-              value="cod"
-              checked={paymentMethod === "cod"}
-              onChange={() => codAvailable && setPaymentMethod("cod")}
-              disabled={!codAvailable}
-              className="mt-1"
-            />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="font-medium text-ethereal-dark">Cash on Delivery</p>
-                {!codAvailable && (
-                  <span className="rounded-full bg-ethereal-silver/30 px-2 py-0.5 text-xs text-muted-foreground">
-                    Unavailable
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Pay when you receive your order. Available in Lahore, Karachi, Islamabad &amp; Faisalabad only.
-              </p>
-              {!codAvailable && watchedCity && (
-                <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
-                  <AlertCircle className="h-3 w-3" />
-                  COD is not available in {watchedCity}. Please choose a different city or use bank transfer.
+          <div className="rounded-lg border border-ethereal-dark bg-ethereal-cream p-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 h-4 w-4 rounded-full border-4 border-ethereal-dark" />
+              <div>
+                <p className="font-medium text-ethereal-dark">Bank Transfer</p>
+                <p className="text-sm text-muted-foreground">
+                  Transfer the order amount to our bank account and upload proof
+                  of payment to complete your order.
                 </p>
-              )}
-            </div>
-          </label>
-        </div>
-
-        {paymentMethod === "bank_transfer" && (
-          <div className="mt-6 rounded-lg border border-ethereal-silver/30 bg-ethereal-cream/30 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-ethereal-dark">
-              <Building2 className="h-4 w-4" />
-              Bank Transfer Details
-            </div>
-            <div className="mt-3 space-y-1 text-sm">
-              <p><span className="text-muted-foreground">Bank:</span> {bankDetails.bankName || "Meezan Bank"}</p>
-              <p><span className="text-muted-foreground">Account Title:</span> {bankDetails.accountTitle || "Anums Store"}</p>
-              <p><span className="text-muted-foreground">Account Number:</span> {bankDetails.accountNumber || "Contact us for details"}</p>
-              <p><span className="text-muted-foreground">IBAN:</span> {bankDetails.iban || "Contact us for details"}</p>
-            </div>
-
-            <div className="mt-4">
-              <Label>Upload Payment Proof</Label>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Accepted formats: JPG, PNG, WEBP (max 5MB)
-              </p>
-              <div className="flex items-center gap-3">
-                <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-ethereal-silver/50 px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-ethereal-dark/50 hover:text-ethereal-dark">
-                  <Upload className="h-4 w-4" />
-                  {isUploadingProof ? "Uploading..." : "Choose file"}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleFileChange}
-                    disabled={isUploadingProof}
-                    className="hidden"
-                  />
-                </label>
-                {paymentProof && !isUploadingProof && (
-                  <span className="text-sm text-green-600">
-                    {paymentProof.name} uploaded
-                  </span>
-                )}
               </div>
-              {paymentProofUrl && (
-                <p className="mt-2 text-xs text-green-600">Proof uploaded successfully</p>
-              )}
             </div>
           </div>
-        )}
+        </div>
+
+        <div className="mt-6 rounded-lg border border-ethereal-silver/30 bg-ethereal-cream/30 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-ethereal-dark">
+            <Building2 className="h-4 w-4" />
+            Bank Transfer Details
+          </div>
+          <div className="mt-3 space-y-1 text-sm">
+            <p>
+              <span className="text-muted-foreground">Bank:</span>{" "}
+              {bankDetails.bankName || "Contact us for details"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Account Title:</span>{" "}
+              {bankDetails.accountTitle || "Anums Store"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Account Number:</span>{" "}
+              {bankDetails.accountNumber || "Contact us for details"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">IBAN:</span>{" "}
+              {bankDetails.iban || "Contact us for details"}
+            </p>
+          </div>
+
+          <div className="mt-4">
+            <Label>Upload Payment Proof *</Label>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Accepted formats: JPG, PNG, WEBP (max 5MB)
+            </p>
+            <div className="flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-ethereal-silver/50 px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-ethereal-dark/50 hover:text-ethereal-dark">
+                <Upload className="h-4 w-4" />
+                {isUploadingProof ? "Uploading..." : "Choose file"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  disabled={isUploadingProof}
+                  className="hidden"
+                />
+              </label>
+              {paymentProof && !isUploadingProof && (
+                <span className="text-sm text-green-600">
+                  {paymentProof.name} uploaded
+                </span>
+              )}
+            </div>
+            {paymentProofUrl && (
+              <p className="mt-2 text-xs text-green-600">
+                Proof uploaded successfully
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="flex justify-between">
@@ -755,7 +752,7 @@ function PaymentStep({
           onClick={onSubmit}
           size="lg"
           className="bg-ethereal-dark text-white hover:bg-ethereal-dark/90"
-          disabled={paymentMethod === "bank_transfer" && !paymentProofUrl && !paymentProof}
+          disabled={!paymentProofUrl}
         >
           Review Order
           <ChevronRight className="ml-2 h-4 w-4" />
@@ -771,7 +768,6 @@ function ReviewStep({
   shipping,
   total,
   shippingInfo,
-  paymentMethod,
   isSubmitting,
   onSubmit,
   onBack,
@@ -781,7 +777,6 @@ function ReviewStep({
   shipping: number
   total: number
   shippingInfo: ShippingInfo
-  paymentMethod: string
   isSubmitting: boolean
   onSubmit: () => void
   onBack: () => void
@@ -798,14 +793,23 @@ function ReviewStep({
             <h3 className="text-sm font-semibold text-ethereal-dark">Items</h3>
             <div className="mt-2 divide-y divide-ethereal-silver/20">
               {items.map((item) => (
-                <div key={item.id} className="flex justify-between py-2 text-sm">
+                <div
+                  key={item.id}
+                  className="flex justify-between py-2 text-sm"
+                >
                   <div>
                     <span className="font-medium">{item.name}</span>
-                    {item.size && <span className="text-muted-foreground"> - {item.size}</span>}
-                    {item.color && <span className="text-muted-foreground"> - {item.color}</span>}
+                    {item.size && (
+                      <span className="text-muted-foreground"> - {item.size}</span>
+                    )}
+                    {item.color && (
+                      <span className="text-muted-foreground"> - {item.color}</span>
+                    )}
                     <span className="text-muted-foreground"> x{item.quantity}</span>
                   </div>
-                  <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
+                  <span className="font-medium">
+                    {formatPrice(item.price * item.quantity)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -814,9 +818,16 @@ function ReviewStep({
           <div className="border-t border-ethereal-silver/30 pt-4">
             <h3 className="text-sm font-semibold text-ethereal-dark">Shipping To</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {shippingInfo.full_name}<br />
-              {shippingInfo.address_line1}<br />
-              {shippingInfo.address_line2 && <>{shippingInfo.address_line2}<br /></>}
+              {shippingInfo.full_name}
+              <br />
+              {shippingInfo.address_line1}
+              {shippingInfo.address_line2 && (
+                <>
+                  <br />
+                  {shippingInfo.address_line2}
+                </>
+              )}
+              <br />
               {shippingInfo.city}, {shippingInfo.province}
               {shippingInfo.postal_code && <> {shippingInfo.postal_code}</>}
             </p>
@@ -824,9 +835,7 @@ function ReviewStep({
 
           <div className="border-t border-ethereal-silver/30 pt-4">
             <h3 className="text-sm font-semibold text-ethereal-dark">Payment Method</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {paymentMethod === "bank_transfer" ? "Bank Transfer" : "Cash on Delivery"}
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Bank Transfer</p>
           </div>
         </div>
       </div>
@@ -903,7 +912,9 @@ function ConfirmationStep({
 
       <div className="mt-8 flex gap-4">
         <Button
-          onClick={() => window.location.href = `/order-confirmation?id=${orderId}`}
+          onClick={() =>
+            (window.location.href = `/order-confirmation?id=${orderId}`)
+          }
           variant="outline"
         >
           View Order Details

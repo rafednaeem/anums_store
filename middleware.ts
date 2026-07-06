@@ -24,7 +24,9 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (!profile || profile.role !== "admin") {
-      return Response.redirect(new URL("/auth/login", request.url));
+      const loginUrl = new URL("/auth/login", request.url);
+      loginUrl.searchParams.set("error", "unauthorized");
+      return Response.redirect(loginUrl);
     }
   }
 
@@ -36,7 +38,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname.startsWith("/auth")) {
+  if (
+    pathname.startsWith("/auth/login") ||
+    pathname.startsWith("/auth/signup")
+  ) {
     if (user) {
       return Response.redirect(new URL("/account", request.url));
     }

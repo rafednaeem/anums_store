@@ -59,7 +59,7 @@ export const shippingSchema = z.object({
 
 export const checkoutSchema = z.object({
   shipping: shippingSchema,
-  payment_method: z.enum(["bank_transfer", "cod"]),
+  payment_method: z.literal("bank_transfer"),
   notes: z.string().optional(),
 })
 
@@ -115,7 +115,9 @@ export const addressSchema = z.object({
 
 export const inquirySchema = z.object({
   name: z.string().min(2, "Name is required"),
-  contact: z.string().min(5, "Contact is required"),
+  email: z.string().email("Valid email is required"),
+  contact: z.string().min(5, "Contact is required").optional().or(z.literal("")),
+  subject: z.string().min(3, "Subject is required"),
   message: z.string().min(10, "Message must be at least 10 characters"),
 })
 

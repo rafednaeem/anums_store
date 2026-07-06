@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
 import type { Database } from "@/types/database"
 
 export function createAdminClient() {
@@ -10,11 +12,9 @@ export function createAdminClient() {
 }
 
 export async function requireAdmin() {
-  const { createClient } = await import("@supabase/ssr")
-  const { cookies } = await import("next/headers")
-
   const cookieStore = await cookies()
-  const supabase = createClient(
+
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -22,14 +22,36 @@ export async function requireAdmin() {
         getAll() {
           return cookieStore.getAll()
         },
-        setAll() {},
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Server Component cannot set cookies
+          }
+        },
       },
     }
   )
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user || user.app_metadata?.role !== "admin") {
+  if (!user) {
+    return null
+  }
+
+  if (user.app_metadata?.role === "admin") {
+    return user
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+
+  if (!profile || (profile as { role: string }).role !== "admin") {
     return null
   }
 

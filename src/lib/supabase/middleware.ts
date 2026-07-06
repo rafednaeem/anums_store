@@ -25,5 +25,5 @@ export function updateSession(request: NextRequest) {
     }
   )
 
-  return { supabase, supabaseResponse }
+  return { supabase, response: supabaseResponse }
 }

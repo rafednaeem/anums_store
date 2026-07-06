@@ -19,6 +19,7 @@ interface Product {
   is_on_sale: boolean
   cover_url: string | null
   inventory_count: number
+  created_at?: string
   category?: { name: string; slug: string } | null
   product_images?: { image_url: string; is_primary: boolean; sort_order: number }[]
 }
@@ -74,11 +75,15 @@ export default function ShopContent({
         break
       case "newest":
       default:
-        result.sort(
-          (a, b) =>
-            new Date(b.created_at as unknown as string).getTime() -
-            new Date(a.created_at as unknown as string).getTime()
-        )
+        result.sort((a, b) => {
+          const aDate = a.created_at
+            ? new Date(String(a.created_at)).getTime()
+            : 0
+          const bDate = b.created_at
+            ? new Date(String(b.created_at)).getTime()
+            : 0
+          return bDate - aDate
+        })
         break
     }
 
