@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   ),
   title: {
     template: `%s | ${storeName}`,
-    default: `${storeName} | Handcrafted Elegance`,
+    default: `${storeName} | Pakistani Fashion & Bridal`,
   },
   description:
     "Discover handcrafted products that blend tradition with modern elegance. Anums Store offers curated collections with timeless design and sustainable craftsmanship.",
