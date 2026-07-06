@@ -1,31 +1,78 @@
-import { NextResponse } from 'next/server';
-import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient';
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { inquirySchema } from '@/lib/validations';
 
-export async function POST(req: Request) {
-  try {
-    if (!isSupabaseConfigured) {
-      return NextResponse.json({ error: 'Supabase is not configured.' }, { status: 503 });
-    }
+const RATE_LIMIT_WINDOW = 60 * 1000;
+const RATE_LIMIT_MAX = 3;
+const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
 
-    const { name, contact, message } = await req.json() as {
-      name?: string;
-      contact?: string;
-      message?: string;
-    };
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
 
-    if (!name?.trim() || !contact?.trim() || !message?.trim()) {
-      return NextResponse.json({ error: 'Name, contact, and message are required.' }, { status: 400 });
-    }
-
-    const { error } = await supabase
-      .from('inquiries')
-      .insert([{ name: name.trim(), contact: contact.trim(), message: message.trim() }]);
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error: unknown) {
-    console.error('Inquiry error:', error);
-    return NextResponse.json({ error: 'Unable to send inquiry right now.' }, { status: 500 });
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW) {
+    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return true;
   }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return false;
+  }
+
+  entry.count++;
+  return true;
+}
+
+export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429 }
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  const validation = inquirySchema.safeParse(body);
+  if (!validation.success) {
+    const firstError = validation.error.errors[0];
+    return NextResponse.json(
+      { error: firstError?.message ?? 'Validation failed' },
+      { status: 400 }
+    );
+  }
+
+  const data = validation.data;
+  const supabase = await createClient();
+
+  const { data: inquiry, error: insertError } = await supabase
+    .from('inquiries')
+    .insert({
+      name: data.name,
+      contact: data.email,
+      message: `[${data.subject || 'No subject'}]\n\n${data.message}`,
+      status: 'new',
+    })
+    .select('id')
+    .single();
+
+  if (insertError) {
+    console.error('Failed to insert inquiry:', insertError.message);
+    return NextResponse.json(
+      { error: 'Failed to submit inquiry. Please try again.' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(
+    { message: 'Inquiry submitted successfully', id: inquiry.id },
+    { status: 201 }
+  );
 }

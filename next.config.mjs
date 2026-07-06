@@ -4,9 +4,20 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'dwkrcchsbykbeeztktth.supabase.co',
+        pathname: '/storage/v1/object/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'cdn.sanity.io',
       },
     ],
+  },
+
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
   },
 
   async headers() {

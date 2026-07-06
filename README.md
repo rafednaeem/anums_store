@@ -1,117 +1,135 @@
 # Anums Store
 
-Production-oriented Next.js storefront for Anums Store, a Lahore-based fashion brand with ready-to-wear and bridal catalog flows.
+Production-grade e-commerce platform for Anums Store, a Lahore-based Pakistani fashion brand. Built with Next.js 14, React 18, TypeScript, Tailwind CSS, Supabase, and shadcn/ui.
 
 ## Tech Stack
 
-- Next.js App Router, React, TypeScript, Tailwind CSS
-- Sanity for product catalog content and images
-- Supabase for auth, inquiries, and order storage
-- Zustand for persisted cart state
-- `react-hot-toast` for customer feedback
-- `next-sitemap` for SEO sitemap generation
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript
+- **UI:** React 18, Tailwind CSS, shadcn/ui, Lucide icons
+- **Database:** Supabase (PostgreSQL + Auth + Storage)
+- **State:** React Context (cart), URL params (filters)
+- **Forms:** react-hook-form + Zod validation
+- **Email:** Resend / Console provider abstraction
+- **Charts:** Recharts (admin dashboard)
+- **Animations:** Framer Motion
 
-## Core Routes
+## Core Features
 
-- `/` home, featured products, categories, promotional sections
-- `/all-products` searchable/filterable product catalog
-- `/ready-to-wear` category catalog
-- `/bridal` bridal catalog with occasion filters
-- `/product/[id]` product detail, gallery, size selection, related products
-- `/checkout` validated checkout with COD, Safepay, and Cashmaal options
-- `/order-confirmation?id=...` order receipt and tracking contact
-- `/login`, `/register`, `/forgot-password`, `/reset-password`, `/account`
-- `/admin` and `/seller` operational roadmap dashboards
+### Storefront
+- Product catalog with category filtering, search, and sorting
+- Product detail with image gallery, size/color variant selection
+- Shopping cart with guest (sessionStorage) and authenticated (DB) support
+- 4-step checkout wizard (Shipping → Payment → Review → Confirm)
+- Bank transfer payment with proof upload
+- Cash on Delivery (city-restricted)
+- Guest checkout support
+- Order tracking with WhatsApp integration
+- Wishlist (DB-backed)
+- Product reviews with moderation
+- Size guide
+
+### Admin Panel
+- Dashboard with KPI cards and charts
+- Order management with status timeline and payment verification
+- Product CRUD with image upload and variant management
+- Category management (hierarchical)
+- Customer management with order history
+- Inventory tracking with inline editing
+- Review moderation
+- Contact form inquiries
+- Site settings (key-value)
+- Real-time notifications
+
+### Authentication
+- Email/password authentication
+- Remember Me with session restoration
+- Admin role via JWT app_metadata
+- Guest-to-customer cart merge
+- Password reset flow
+
+### Email System
+- Provider abstraction (Resend, Console)
+- Order status email templates
+- Deduplication (24-hour window)
+- Retry with exponential backoff
+- Email logging
+
+### SEO
+- Dynamic metadata per page
+- JSON-LD structured data
+- OpenGraph + Twitter cards
+- Dynamic sitemap
+
+## Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment
+cp .env.example .env.local
+# Fill in Supabase credentials
+
+# Run development server
+npm run dev
+
+# Run database migrations
+# Execute supabase/migrations/001_initial_schema.sql in Supabase SQL Editor
+```
 
 ## Environment Variables
 
-Create `.env.local` from `.env.example`.
-
-```bash
-NEXT_PUBLIC_SITE_URL=https://anumsstore.pk
-
-NEXT_PUBLIC_SANITY_PROJECT_ID=
-NEXT_PUBLIC_SANITY_DATASET=production
-
+```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
-SAFEPAY_SECRET=
-CASHMAAL_API_KEY=
-CASHMAAL_SECRET=
-
-NEXT_PUBLIC_GA_ID=
+# Store
+NEXT_PUBLIC_STORE_NAME=Anums Store
+NEXT_PUBLIC_BASE_URL=https://anumsstore.pk
+NEXT_PUBLIC_STORE_EMAIL=info@anumsstore.pk
+NEXT_PUBLIC_STORE_PHONE=+923224183457
 NEXT_PUBLIC_WHATSAPP_NUMBER=923224183457
+
+# Email (optional)
+RESEND_API_KEY=
+
+# Analytics (optional)
+NEXT_PUBLIC_GA_ID=
 ```
 
-## Supabase Tables
+## Project Structure
 
-Minimum `orders` columns:
-
-- `id` uuid primary key
-- `customer_name`, `customer_last_name`, `phone`, `address`, `city`, `postal_code`
-- `items` jsonb
-- `subtotal`, `shipping`, `total`
-- `payment_method`, `payment_status`, `status`
-- `created_at`
-
-Minimum `inquiries` columns:
-
-- `id` uuid primary key
-- `name`, `contact`, `message`
-- `created_at`
-
-Enable row level security before launch. Public inserts can be allowed for checkout/contact, but order reads and admin operations must be role-protected.
-
-## Development
-
-```bash
-npm install
-npm run dev
+```
+src/
+├── app/
+│   ├── (store)/          # Storefront pages
+│   ├── (admin)/          # Admin dashboard
+│   ├── auth/             # Authentication pages
+│   └── api/              # API routes
+├── components/
+│   ├── ui/               # shadcn/ui components
+│   ├── shared/           # Cross-cutting components
+│   ├── store/            # Storefront components
+│   └── admin/            # Admin components
+├── hooks/                # Custom React hooks
+├── lib/
+│   ├── supabase/         # 5 Supabase client configs
+│   ├── email/            # Email system
+│   ├── admin/            # Server actions
+│   └── ...               # Utilities
+├── types/                # TypeScript types
+└── constants/            # App constants
 ```
 
-Open `http://localhost:3000`.
+## Database
 
-On Windows PowerShell, if script execution blocks `npm`, use:
+Run `supabase/migrations/001_initial_schema.sql` in your Supabase SQL Editor to create all tables, RLS policies, functions, and triggers.
 
-```bash
-npm.cmd run dev
-npm.cmd run build
-```
+Key tables: profiles, categories, products, product_images, product_variants, addresses, carts, cart_items, orders, order_items, order_timeline, payments, wishlists, reviews, inquiries, site_settings, email_logs, admin_notifications.
 
-## Build
+## License
 
-```bash
-npm run build
-npm run start
-```
-
-`npm run build` also runs sitemap generation through `postbuild`.
-
-## Deployment
-
-1. Add all environment variables to Vercel or your hosting provider.
-2. Configure Sanity CORS for the deployed domain.
-3. Configure Supabase Auth redirect URLs:
-   - `/account`
-   - `/reset-password`
-4. Create Supabase tables and RLS policies.
-5. Add payment gateway credentials only in server-side environment variables.
-6. Run `npm run build` before promoting.
-
-## Production Readiness Notes
-
-- Product catalog is Sanity-backed and resilient when Sanity env vars are missing.
-- Order totals are calculated server-side to prevent client tampering.
-- Supabase/payment routes return clear service errors when env vars are missing.
-- Remote Google font fetching was removed; local bundled fonts are used for reliable builds.
-- Admin and seller dashboards define the management modules, but full role-protected CRUD requires Supabase role policies and CMS workflow decisions.
-
-## Future Scalability
-
-- Add Supabase service-role server client for protected admin APIs.
-- Add order history keyed to authenticated user IDs.
-- Add coupon table and server-validated coupon redemption.
-- Add inventory reservation and stock decrement after payment/order confirmation.
-- Add review moderation tables and CMS-backed homepage banners.
-- Add Stripe or a finalized Pakistan payment provider implementation with webhook signature verification.
+Private - Anums Store
