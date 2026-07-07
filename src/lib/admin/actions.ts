@@ -191,7 +191,6 @@ export async function createProduct(data: ProductInput) {
       inventory_count: Math.round(Number(data.inventory_count) || 0),
       craft_type: data.craft_type || null,
       cover_url: data.cover_url || null,
-      catalog_url: data.catalog_url ?? null,
     }
 
     console.log("[createProduct] Inserting product:", { ...insertData, slug })
@@ -336,7 +335,6 @@ export async function updateProduct(id: string, data: ProductInput) {
         inventory_count: Math.round(Number(data.inventory_count) || 0),
         craft_type: data.craft_type || null,
         cover_url: data.cover_url || null,
-        catalog_url: data.catalog_url ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
