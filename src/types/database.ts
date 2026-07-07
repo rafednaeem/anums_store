@@ -84,10 +84,10 @@ export interface Database {
           description: string | null
           category_id: string | null
           price: number
-          compare_price: number | null
           sale_price: number | null
           is_on_sale: boolean
           is_active: boolean
+          is_featured: boolean
           inventory_count: number
           craft_type: string | null
           cover_url: string | null
@@ -102,10 +102,10 @@ export interface Database {
           description?: string | null
           category_id?: string | null
           price: number
-          compare_price?: number | null
           sale_price?: number | null
           is_on_sale?: boolean
           is_active?: boolean
+          is_featured?: boolean
           inventory_count?: number
           craft_type?: string | null
           cover_url?: string | null
@@ -120,10 +120,10 @@ export interface Database {
           description?: string | null
           category_id?: string | null
           price?: number
-          compare_price?: number | null
           sale_price?: number | null
           is_on_sale?: boolean
           is_active?: boolean
+          is_featured?: boolean
           inventory_count?: number
           craft_type?: string | null
           cover_url?: string | null

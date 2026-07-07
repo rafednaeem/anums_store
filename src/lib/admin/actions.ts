@@ -184,10 +184,10 @@ export async function createProduct(data: ProductInput) {
       description: data.description || null,
       category_id: data.category_id || null,
       price: Math.round(Number(data.price) || 0),
-      compare_price: data.compare_price != null ? Math.round(Number(data.compare_price)) : null,
       sale_price: data.sale_price != null ? Math.round(Number(data.sale_price)) : null,
       is_on_sale: (data.sale_price != null ? Math.round(Number(data.sale_price)) : 0) > 0,
       is_active: data.is_active ?? true,
+      is_featured: data.is_featured ?? false,
       inventory_count: Math.round(Number(data.inventory_count) || 0),
       craft_type: data.craft_type || null,
       cover_url: data.cover_url || null,
@@ -300,6 +300,7 @@ export async function createProduct(data: ProductInput) {
     }
 
     revalidatePath("/admin/products")
+    revalidatePath("/")
     return { ok: true, id: productId }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error creating product"
@@ -328,10 +329,10 @@ export async function updateProduct(id: string, data: ProductInput) {
         description: data.description || null,
         category_id: data.category_id || null,
         price: Math.round(Number(data.price) || 0),
-        compare_price: data.compare_price != null ? Math.round(Number(data.compare_price)) : null,
         sale_price: data.sale_price != null ? Math.round(Number(data.sale_price)) : null,
         is_on_sale: (data.sale_price != null ? Math.round(Number(data.sale_price)) : 0) > 0,
         is_active: data.is_active ?? true,
+        is_featured: data.is_featured ?? false,
         inventory_count: Math.round(Number(data.inventory_count) || 0),
         craft_type: data.craft_type || null,
         cover_url: data.cover_url || null,
@@ -436,6 +437,7 @@ export async function updateProduct(id: string, data: ProductInput) {
 
     revalidatePath("/admin/products")
     revalidatePath(`/admin/products/${id}/edit`)
+    revalidatePath("/")
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error updating product"

@@ -29,7 +29,6 @@ interface ProductDetailProps {
     slug: string
     description: string | null
     price: number
-    compare_price: number | null
     sale_price: number | null
     is_on_sale: boolean
     inventory_count: number
@@ -319,11 +318,6 @@ export default function ProductDetailContent({ product }: ProductDetailProps) {
             <span className="font-heading text-2xl font-bold text-ethereal-dark">
               {formatPrice(displayPrice)}
             </span>
-            {product.is_on_sale && product.compare_price && (
-              <span className="text-lg text-muted-foreground line-through">
-                {formatPrice(product.compare_price)}
-              </span>
-            )}
           </div>
 
           {/* Description */}

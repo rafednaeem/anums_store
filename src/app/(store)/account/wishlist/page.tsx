@@ -14,7 +14,6 @@ interface WishlistProduct {
   name: string
   slug: string
   price: number
-  compare_price: number | null
   sale_price: number | null
   is_on_sale: boolean
   cover_url: string | null
@@ -55,7 +54,7 @@ function WishlistContent() {
 
     const { data } = await supabase
       .from("wishlists")
-      .select("id, product_id, product:products(id, name, slug, price, compare_price, sale_price, is_on_sale, cover_url, inventory_count, category:categories(name))")
+      .select("id, product_id, product:products(id, name, slug, price, sale_price, is_on_sale, cover_url, inventory_count, category:categories(name))")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
 
@@ -80,7 +79,6 @@ function WishlistContent() {
             name: product.name,
             slug: product.slug,
             price: product.price,
-            compare_price: product.compare_price,
             sale_price: product.sale_price,
             is_on_sale: product.is_on_sale,
             cover_url: product.cover_url,

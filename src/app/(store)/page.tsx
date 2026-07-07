@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
 import { storeName, storeUrl } from "@/lib/constants"
+import ProductCard from "@/components/store/ProductCard"
 
 export const metadata: Metadata = {
   title: "Anums Store - Pakistani Fashion",
@@ -45,7 +47,22 @@ const jsonLd = {
   sameAs: [],
 }
 
-export default function StoreHomePage() {
+export default async function StoreHomePage() {
+  const supabase = await createClient()
+
+  const { data: featuredProducts } = await supabase
+    .from("products")
+    .select("*, category:categories(name, slug), product_images(image_url, is_primary, sort_order)")
+    .eq("is_active", true)
+    .eq("is_featured", true)
+    .order("created_at", { ascending: false })
+    .limit(8)
+
+  const featured = (featuredProducts || []).map((p) => ({
+    ...p,
+    cover_url: p.cover_url || p.product_images?.find((img: { is_primary: boolean }) => img.is_primary)?.image_url || p.product_images?.sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)?.[0]?.image_url || null,
+  }))
+
   return (
     <>
       <script
@@ -106,12 +123,17 @@ export default function StoreHomePage() {
         </div>
 
         <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {/* Empty state placeholder */}
-          <div className="col-span-full flex flex-col items-center justify-center rounded-lg border border-dashed border-ethereal-silver/50 bg-ethereal-cream/30 py-20 text-center">
-            <p className="text-sm text-muted-foreground">
-              Products coming soon. Check back shortly.
-            </p>
-          </div>
+          {featured.length > 0 ? (
+            featured.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center rounded-lg border border-dashed border-ethereal-silver/50 bg-ethereal-cream/30 py-20 text-center">
+              <p className="text-sm text-muted-foreground">
+                Products coming soon. Check back shortly.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

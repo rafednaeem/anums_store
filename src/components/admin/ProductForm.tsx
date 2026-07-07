@@ -53,12 +53,12 @@ export function ProductForm({ initialData, categories = [] }: ProductFormProps) 
       description: initialData?.description ?? "",
       category_id: initialData?.category_id ?? undefined,
       price: initialData?.price ?? 0,
-      compare_price: initialData?.compare_price ?? null,
       sale_price: initialData?.sale_price ?? null,
       inventory_count: initialData?.inventory_count ?? 0,
       craft_type: initialData?.craft_type ?? "",
       cover_url: initialData?.cover_url ?? null,
       is_active: initialData?.is_active ?? true,
+      is_featured: initialData?.is_featured ?? false,
       sizes: initialData?.sizes ?? [],
       colors: initialData?.colors ?? [],
       gallery_urls: initialData?.gallery_urls ?? [],
@@ -223,7 +223,7 @@ export function ProductForm({ initialData, categories = [] }: ProductFormProps) 
           <CardTitle>Pricing & Inventory</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="price">Price (PKR) *</Label>
               <Input
@@ -236,18 +236,6 @@ export function ProductForm({ initialData, categories = [] }: ProductFormProps) 
               {errors.price && (
                 <p className="text-xs text-red-500">{errors.price.message}</p>
               )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="compare_price">Compare Price</Label>
-              <Input
-                id="compare_price"
-                type="number"
-                step="1"
-                min="0"
-                {...register("compare_price", {
-                  setValueAs: (v) => (v === "" || v == null ? null : Number(v)),
-                })}
-              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="sale_price">Sale Price</Label>
@@ -263,7 +251,7 @@ export function ProductForm({ initialData, categories = [] }: ProductFormProps) 
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="inventory_count">Inventory Count</Label>
               <Input
@@ -282,6 +270,17 @@ export function ProductForm({ initialData, categories = [] }: ProductFormProps) 
                   onChange={(e) => setValue("is_active", e.target.checked)}
                 />
                 <span className="text-sm font-medium">Active</span>
+              </label>
+            </div>
+            <div className="flex items-end">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-neutral-300"
+                  checked={watch("is_featured") ?? false}
+                  onChange={(e) => setValue("is_featured", e.target.checked)}
+                />
+                <span className="text-sm font-medium">Featured Product</span>
               </label>
             </div>
           </div>

@@ -14,7 +14,6 @@ interface Product {
   name: string
   slug: string
   price: number
-  compare_price: number | null
   sale_price: number | null
   is_on_sale: boolean
   cover_url: string | null

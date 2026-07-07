@@ -17,7 +17,6 @@ interface ProductCardProps {
     name: string
     slug: string
     price: number
-    compare_price: number | null
     sale_price: number | null
     is_on_sale: boolean
     cover_url: string | null
@@ -160,11 +159,6 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-sm font-semibold text-ethereal-dark">
               Rs. {displayPrice.toLocaleString()}
             </span>
-            {product.is_on_sale && product.compare_price && (
-              <span className="text-xs text-muted-foreground line-through">
-                Rs. {product.compare_price.toLocaleString()}
-              </span>
-            )}
           </div>
           {isOutOfStock && (
             <p className="mt-1 text-xs text-red-500">Out of stock</p>
