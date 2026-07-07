@@ -12,8 +12,34 @@ function slugify(text: string): string {
   return text
     .toLowerCase()
     .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
+}
+
+async function generateUniqueSlug(supabase: Any, baseSlug: string, excludeId?: string): Promise<string> {
+  let slug = baseSlug
+  let suffix = 1
+  
+  while (true) {
+    let query = supabase
+      .from("products")
+      .select("id")
+      .eq("slug", slug)
+    
+    if (excludeId) {
+      query = query.neq("id", excludeId)
+    }
+    
+    const { data: existing } = await query.single()
+    
+    if (!existing) break
+    slug = `${baseSlug}-${suffix}`
+    suffix++
+  }
+  
+  return slug
 }
 
 export async function updateOrderStatus(orderId: string, status: string) {
@@ -139,14 +165,18 @@ export async function rejectPayment(orderId: string, reason: string) {
 }
 
 export async function createProduct(data: ProductInput) {
-  await requireAdminThrow()
-  const supabase = createServiceRoleClient() as Any
+  try {
+    await requireAdminThrow()
+    const supabase = createServiceRoleClient() as Any
 
-  const slug = data.slug?.trim() ? slugify(data.slug) : slugify(data.name)
+    const baseSlug = data.slug?.trim() ? slugify(data.slug) : slugify(data.name)
+    if (!baseSlug) {
+      throw new Error("Invalid product name: unable to generate slug")
+    }
+    
+    const slug = await generateUniqueSlug(supabase, baseSlug)
 
-  const { data: product, error } = await supabase
-    .from("products")
-    .insert({
+    const insertData = {
       name: data.name,
       slug,
       description: data.description || null,
@@ -160,115 +190,32 @@ export async function createProduct(data: ProductInput) {
       craft_type: data.craft_type || null,
       cover_url: data.cover_url || null,
       catalog_url: data.catalog_url ?? null,
-    })
-    .select("id")
-    .single()
+    }
 
-  if (error) throw new Error(error.message)
+    console.log("[createProduct] Inserting product:", { ...insertData, slug })
 
-  const productId = (product as { id: string }).id
+    const { data: product, error } = await supabase
+      .from("products")
+      .insert(insertData)
+      .select("id")
+      .single()
 
-  const galleryImages: string[] = data.gallery_urls ?? []
-  if (galleryImages.length === 0 && data.cover_url) {
-    galleryImages.push(data.cover_url)
-  }
+    if (error) {
+      console.error("[createProduct] Database error:", error)
+      console.error("[createProduct] Insert payload:", JSON.stringify(insertData))
+      throw new Error(`Database error: ${error.message}`)
+    }
 
-  if (galleryImages.length > 0) {
-    const images = galleryImages.map((url, i) => ({
-      product_id: productId,
-      image_url: url,
-      sort_order: i,
-      is_primary: i === 0,
-    }))
-    const { error: imgError } = await supabase
-      .from("product_images")
-      .insert(images)
-    if (imgError) throw new Error(imgError.message)
-  }
+    const productId = (product as { id: string }).id
 
-  const sizes = (data.sizes ?? []).filter((s) => s && s !== "Default")
-  const colors = (data.colors ?? []).filter((c) => c && c.name)
+    const galleryImages: string[] = data.gallery_urls ?? []
+    if (galleryImages.length === 0 && data.cover_url) {
+      galleryImages.push(data.cover_url)
+    }
 
-  if (sizes.length > 0 && colors.length > 0) {
-    const variants = sizes.flatMap((size) =>
-      colors.map((color) => ({
+    if (galleryImages.length > 0) {
+      const images = galleryImages.map((url, i) => ({
         product_id: productId,
-        size,
-        color: color.name,
-        color_hex: color.hex,
-        inventory_count: 0,
-        is_active: true,
-      }))
-    )
-    const { error: varError } = await supabase
-      .from("product_variants")
-      .insert(variants)
-    if (varError) throw new Error(varError.message)
-  } else if (sizes.length > 0) {
-    const variants = sizes.map((size) => ({
-      product_id: productId,
-      size,
-      color: "Default",
-      color_hex: null,
-      inventory_count: 0,
-      is_active: true,
-    }))
-    const { error: varError } = await supabase
-      .from("product_variants")
-      .insert(variants)
-    if (varError) throw new Error(varError.message)
-  } else if (colors.length > 0) {
-    const variants = colors.map((color) => ({
-      product_id: productId,
-      size: "Default",
-      color: color.name,
-      color_hex: color.hex,
-      inventory_count: 0,
-      is_active: true,
-    }))
-    const { error: varError } = await supabase
-      .from("product_variants")
-      .insert(variants)
-    if (varError) throw new Error(varError.message)
-  }
-
-  revalidatePath("/admin/products")
-  return productId
-}
-
-export async function updateProduct(id: string, data: ProductInput) {
-  await requireAdminThrow()
-  const supabase = createServiceRoleClient() as Any
-
-  const slug = data.slug?.trim() ? slugify(data.slug) : slugify(data.name)
-
-  const { error } = await supabase
-    .from("products")
-    .update({
-      name: data.name,
-      slug,
-      description: data.description || null,
-      category_id: data.category_id || null,
-      price: data.price,
-      compare_price: data.compare_price ?? null,
-      sale_price: data.sale_price ?? null,
-      is_on_sale: data.sale_price != null && data.sale_price > 0,
-      is_active: data.is_active ?? true,
-      inventory_count: data.inventory_count ?? 0,
-      craft_type: data.craft_type || null,
-      cover_url: data.cover_url || null,
-      catalog_url: data.catalog_url ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-
-  if (error) throw new Error(error.message)
-
-  if (data.gallery_urls) {
-    await supabase.from("product_images").delete().eq("product_id", id)
-    if (data.gallery_urls.length > 0) {
-      const images = data.gallery_urls.map((url, i) => ({
-        product_id: id,
         image_url: url,
         sort_order: i,
         is_primary: i === 0,
@@ -276,60 +223,222 @@ export async function updateProduct(id: string, data: ProductInput) {
       const { error: imgError } = await supabase
         .from("product_images")
         .insert(images)
-      if (imgError) throw new Error(imgError.message)
+      if (imgError) {
+        console.error("[createProduct] Image insert error:", imgError)
+        throw new Error(imgError.message)
+      }
     }
+
+    const sizes = (data.sizes ?? []).filter((s) => s && s !== "Default")
+    const colors = (data.colors ?? []).filter((c) => c && c.name)
+
+    let variantsToInsert: {
+      product_id: string
+      size: string
+      color: string
+      color_hex: string | null
+      inventory_count: number
+      is_active: boolean
+    }[] = []
+
+    if (sizes.length > 0 && colors.length > 0) {
+      const seen = new Set<string>()
+      variantsToInsert = sizes.flatMap((size) =>
+        colors.map((color) => {
+          const key = `${size}-${color.name}`
+          if (seen.has(key)) return null
+          seen.add(key)
+          return {
+            product_id: productId,
+            size,
+            color: color.name,
+            color_hex: color.hex,
+            inventory_count: 0,
+            is_active: true,
+          }
+        })
+      ).filter(Boolean) as Any
+    } else if (sizes.length > 0) {
+      const seen = new Set<string>()
+      variantsToInsert = sizes.map((size) => {
+        if (seen.has(size)) return null
+        seen.add(size)
+        return {
+          product_id: productId,
+          size,
+          color: "Default",
+          color_hex: null,
+          inventory_count: 0,
+          is_active: true,
+        }
+      }).filter(Boolean) as Any
+    } else if (colors.length > 0) {
+      const seen = new Set<string>()
+      variantsToInsert = colors.map((color) => {
+        if (seen.has(color.name)) return null
+        seen.add(color.name)
+        return {
+          product_id: productId,
+          size: "Default",
+          color: color.name,
+          color_hex: color.hex,
+          inventory_count: 0,
+          is_active: true,
+        }
+      }).filter(Boolean) as Any
+    }
+
+    if (variantsToInsert.length > 0) {
+      const { error: varError } = await supabase
+        .from("product_variants")
+        .insert(variantsToInsert)
+      if (varError) {
+        console.error("[createProduct] Variant insert error:", varError)
+        throw new Error(varError.message)
+      }
+    }
+
+    revalidatePath("/admin/products")
+    return productId
+  } catch (err) {
+    console.error("[createProduct] Exception:", err)
+    throw err
   }
+}
 
-  await supabase.from("product_variants").delete().eq("product_id", id)
+export async function updateProduct(id: string, data: ProductInput) {
+  try {
+    await requireAdminThrow()
+    const supabase = createServiceRoleClient() as Any
 
-  const sizes = (data.sizes ?? []).filter((s) => s && s !== "Default")
-  const colors = (data.colors ?? []).filter((c) => c && c.name)
+    const baseSlug = data.slug?.trim() ? slugify(data.slug) : slugify(data.name)
+    if (!baseSlug) {
+      throw new Error("Invalid product name: unable to generate slug")
+    }
 
-  if (sizes.length > 0 && colors.length > 0) {
-    const variants = sizes.flatMap((size) =>
-      colors.map((color) => ({
-        product_id: id,
-        size,
-        color: color.name,
-        color_hex: color.hex,
-        inventory_count: 0,
-        is_active: true,
-      }))
-    )
-    const { error: varError } = await supabase
-      .from("product_variants")
-      .insert(variants)
-    if (varError) throw new Error(varError.message)
-  } else if (sizes.length > 0) {
-    const variants = sizes.map((size) => ({
-      product_id: id,
-      size,
-      color: "Default",
-      color_hex: null,
-      inventory_count: 0,
-      is_active: true,
-    }))
-    const { error: varError } = await supabase
-      .from("product_variants")
-      .insert(variants)
-    if (varError) throw new Error(varError.message)
-  } else if (colors.length > 0) {
-    const variants = colors.map((color) => ({
-      product_id: id,
-      size: "Default",
-      color: color.name,
-      color_hex: color.hex,
-      inventory_count: 0,
-      is_active: true,
-    }))
-    const { error: varError } = await supabase
-      .from("product_variants")
-      .insert(variants)
-    if (varError) throw new Error(varError.message)
+    const slug = await generateUniqueSlug(supabase, baseSlug, id)
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: data.name,
+        slug,
+        description: data.description || null,
+        category_id: data.category_id || null,
+        price: data.price,
+        compare_price: data.compare_price ?? null,
+        sale_price: data.sale_price ?? null,
+        is_on_sale: data.sale_price != null && data.sale_price > 0,
+        is_active: data.is_active ?? true,
+        inventory_count: data.inventory_count ?? 0,
+        craft_type: data.craft_type || null,
+        cover_url: data.cover_url || null,
+        catalog_url: data.catalog_url ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+
+    if (error) {
+      console.error("[updateProduct] Database error:", error)
+      throw new Error(error.message)
+    }
+
+    if (data.gallery_urls) {
+      await supabase.from("product_images").delete().eq("product_id", id)
+      if (data.gallery_urls.length > 0) {
+        const images = data.gallery_urls.map((url, i) => ({
+          product_id: id,
+          image_url: url,
+          sort_order: i,
+          is_primary: i === 0,
+        }))
+        const { error: imgError } = await supabase
+          .from("product_images")
+          .insert(images)
+        if (imgError) {
+          console.error("[updateProduct] Image insert error:", imgError)
+          throw new Error(imgError.message)
+        }
+      }
+    }
+
+    await supabase.from("product_variants").delete().eq("product_id", id)
+
+    const sizes = (data.sizes ?? []).filter((s) => s && s !== "Default")
+    const colors = (data.colors ?? []).filter((c) => c && c.name)
+
+    let variantsToInsert: {
+      product_id: string
+      size: string
+      color: string
+      color_hex: string | null
+      inventory_count: number
+      is_active: boolean
+    }[] = []
+
+    if (sizes.length > 0 && colors.length > 0) {
+      const seen = new Set<string>()
+      variantsToInsert = sizes.flatMap((size) =>
+        colors.map((color) => {
+          const key = `${size}-${color.name}`
+          if (seen.has(key)) return null
+          seen.add(key)
+          return {
+            product_id: id,
+            size,
+            color: color.name,
+            color_hex: color.hex,
+            inventory_count: 0,
+            is_active: true,
+          }
+        })
+      ).filter(Boolean) as Any
+    } else if (sizes.length > 0) {
+      const seen = new Set<string>()
+      variantsToInsert = sizes.map((size) => {
+        if (seen.has(size)) return null
+        seen.add(size)
+        return {
+          product_id: id,
+          size,
+          color: "Default",
+          color_hex: null,
+          inventory_count: 0,
+          is_active: true,
+        }
+      }).filter(Boolean) as Any
+    } else if (colors.length > 0) {
+      const seen = new Set<string>()
+      variantsToInsert = colors.map((color) => {
+        if (seen.has(color.name)) return null
+        seen.add(color.name)
+        return {
+          product_id: id,
+          size: "Default",
+          color: color.name,
+          color_hex: color.hex,
+          inventory_count: 0,
+          is_active: true,
+        }
+      }).filter(Boolean) as Any
+    }
+
+    if (variantsToInsert.length > 0) {
+      const { error: varError } = await supabase
+        .from("product_variants")
+        .insert(variantsToInsert)
+      if (varError) {
+        console.error("[updateProduct] Variant insert error:", varError)
+        throw new Error(varError.message)
+      }
+    }
+
+    revalidatePath("/admin/products")
+    revalidatePath(`/admin/products/${id}/edit`)
+  } catch (err) {
+    console.error("[updateProduct] Exception:", err)
+    throw err
   }
-
-  revalidatePath("/admin/products")
-  revalidatePath(`/admin/products/${id}/edit`)
 }
 
 export async function deleteProduct(id: string) {
