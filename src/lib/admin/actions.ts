@@ -8,6 +8,8 @@ import type { ProductInput } from "@/lib/validations"
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any
 
+type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -181,12 +183,12 @@ export async function createProduct(data: ProductInput) {
       slug,
       description: data.description || null,
       category_id: data.category_id || null,
-      price: data.price,
-      compare_price: data.compare_price ?? null,
-      sale_price: data.sale_price ?? null,
-      is_on_sale: data.sale_price != null && data.sale_price > 0,
+      price: Math.round(Number(data.price) || 0),
+      compare_price: data.compare_price != null ? Math.round(Number(data.compare_price)) : null,
+      sale_price: data.sale_price != null ? Math.round(Number(data.sale_price)) : null,
+      is_on_sale: (data.sale_price != null ? Math.round(Number(data.sale_price)) : 0) > 0,
       is_active: data.is_active ?? true,
-      inventory_count: data.inventory_count ?? 0,
+      inventory_count: Math.round(Number(data.inventory_count) || 0),
       craft_type: data.craft_type || null,
       cover_url: data.cover_url || null,
       catalog_url: data.catalog_url ?? null,
@@ -299,10 +301,11 @@ export async function createProduct(data: ProductInput) {
     }
 
     revalidatePath("/admin/products")
-    return productId
+    return { ok: true, id: productId }
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error creating product"
     console.error("[createProduct] Exception:", err)
-    throw err
+    return { ok: false, error: message }
   }
 }
 
@@ -325,12 +328,12 @@ export async function updateProduct(id: string, data: ProductInput) {
         slug,
         description: data.description || null,
         category_id: data.category_id || null,
-        price: data.price,
-        compare_price: data.compare_price ?? null,
-        sale_price: data.sale_price ?? null,
-        is_on_sale: data.sale_price != null && data.sale_price > 0,
+        price: Math.round(Number(data.price) || 0),
+        compare_price: data.compare_price != null ? Math.round(Number(data.compare_price)) : null,
+        sale_price: data.sale_price != null ? Math.round(Number(data.sale_price)) : null,
+        is_on_sale: (data.sale_price != null ? Math.round(Number(data.sale_price)) : 0) > 0,
         is_active: data.is_active ?? true,
-        inventory_count: data.inventory_count ?? 0,
+        inventory_count: Math.round(Number(data.inventory_count) || 0),
         craft_type: data.craft_type || null,
         cover_url: data.cover_url || null,
         catalog_url: data.catalog_url ?? null,
@@ -435,9 +438,11 @@ export async function updateProduct(id: string, data: ProductInput) {
 
     revalidatePath("/admin/products")
     revalidatePath(`/admin/products/${id}/edit`)
+    return { ok: true }
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error updating product"
     console.error("[updateProduct] Exception:", err)
-    throw err
+    return { ok: false, error: message }
   }
 }
 

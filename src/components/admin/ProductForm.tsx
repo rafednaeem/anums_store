@@ -117,20 +117,28 @@ export function ProductForm({ initialData, categories = [] }: ProductFormProps) 
     setIsSubmitting(true)
     try {
       if (initialData?.id) {
-        await updateProduct(initialData.id, {
+        const result = await updateProduct(initialData.id, {
           ...data,
           cover_url: coverUrl,
           gallery_urls: galleryUrls,
         })
+        if (!result.ok) {
+          toast.error(result.error)
+          return
+        }
         toast.success("Product updated")
         router.push("/admin/products")
         router.refresh()
       } else {
-        await createProduct({
+        const result = await createProduct({
           ...data,
           cover_url: coverUrl,
           gallery_urls: galleryUrls,
         })
+        if (!result.ok) {
+          toast.error(result.error)
+          return
+        }
         toast.success("Product created")
         router.push("/admin/products")
         router.refresh()
