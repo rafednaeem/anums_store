@@ -12,7 +12,6 @@ interface InventoryRowProps {
     size: string
     color: string
     color_hex: string | null
-    sku: string | null
     inventory_count: number
     products: { name: string; cover_url: string | null } | null
   }
@@ -67,9 +66,6 @@ export function InventoryRow({ variant }: InventoryRowProps) {
               "Default"}
           </span>
         </div>
-      </td>
-      <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">
-        {variant.sku ?? "-"}
       </td>
       <td className="px-4 py-3 text-center">
         <span

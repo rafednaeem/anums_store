@@ -48,7 +48,7 @@ export default async function ProductPage({ params }: PageProps) {
   const { data: product, error } = await supabase
     .from("products")
     .select(
-      "*, category:categories(id, name, slug), product_images(id, image_url, sort_order, is_primary), product_variants(id, size, color, color_hex, sku, inventory_count, is_active)"
+      "*, category:categories(id, name, slug), product_images(id, image_url, sort_order, is_primary), product_variants(id, size, color, color_hex, inventory_count, is_active)"
     )
     .eq("slug", slug)
     .single()

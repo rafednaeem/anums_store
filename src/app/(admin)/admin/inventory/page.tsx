@@ -9,7 +9,7 @@ export default async function InventoryPage() {
 
   const { data: variants } = await supabase
     .from("product_variants")
-    .select("id, size, color, color_hex, sku, inventory_count, is_active, product_id, products(name, cover_url)")
+    .select("id, size, color, color_hex, inventory_count, is_active, product_id, products(name, cover_url)")
     .eq("is_active", true)
     .order("inventory_count", { ascending: true })
 
@@ -50,9 +50,6 @@ export default async function InventoryPage() {
                   <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">
                     Variant
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">
-                    SKU
-                  </th>
                   <th className="px-4 py-3 text-center font-medium text-neutral-500 dark:text-neutral-400">
                     Stock
                   </th>
@@ -64,7 +61,7 @@ export default async function InventoryPage() {
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400">
+                    <td colSpan={4} className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400">
                       No inventory items found
                     </td>
                   </tr>
