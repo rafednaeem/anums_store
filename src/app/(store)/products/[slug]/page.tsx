@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import ProductDetailContent from "./ProductDetailContent"
 import { storeName, storeUrl } from "@/lib/constants"
@@ -54,27 +55,7 @@ export default async function ProductPage({ params }: PageProps) {
     .single()
 
   if (!product || error) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
-        <h1 className="text-2xl font-bold text-red-600">Debug: Product Not Found</h1>
-        <div className="mt-6 space-y-3 rounded-lg border border-red-200 bg-red-50 p-6 text-sm">
-          <p><strong>Slug requested:</strong> {slug}</p>
-          <p><strong>Supabase error:</strong> {error ? `${error.message} (code: ${error.code})` : "None"}</p>
-          <p><strong>Product data:</strong> {product ? "Found" : "Null"}</p>
-          <p className="mt-4 text-red-700">
-            Possible causes:
-          </p>
-          <ul className="list-inside list-disc space-y-1 text-red-600">
-            <li>Product does not exist in the database</li>
-            <li>Product <code>is_active</code> is not <code>true</code></li>
-            <li>RLS policy is blocking access — run migration 004 if not done</li>
-          </ul>
-        </div>
-        <a href="/shop" className="mt-6 inline-block rounded bg-black px-6 py-2 text-white hover:bg-gray-800">
-          Back to Shop
-        </a>
-      </div>
-    )
+    notFound()
   }
 
   const images = (product.product_images || [])
