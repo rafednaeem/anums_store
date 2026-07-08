@@ -46,16 +46,20 @@ export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params
   const supabase = await createClient()
 
-  const { data: product } = await supabase
+  const { data: product, error } = await supabase
     .from("products")
     .select(
       "*, category:categories(id, name, slug), product_images(id, image_url, sort_order, is_primary), product_variants(id, size, color, color_hex, sku, inventory_count, is_active)"
     )
     .eq("slug", slug)
-    .eq("is_active", true)
     .single()
 
+  if (error) {
+    console.error("[ProductPage] Query error for slug:", slug, error)
+  }
+
   if (!product) {
+    console.error("[ProductPage] No product found for slug:", slug)
     notFound()
   }
 
