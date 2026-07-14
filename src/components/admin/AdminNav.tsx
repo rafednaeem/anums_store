@@ -47,6 +47,14 @@ export function AdminNav() {
       return
     }
 
+    // Clear all client storage on admin logout
+    try {
+      localStorage.clear()
+      sessionStorage.clear()
+    } catch {
+      // Storage unavailable
+    }
+
     toast.success("Logged out successfully")
     router.push("/auth/login")
   }
