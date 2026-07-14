@@ -1,69 +1,59 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import {
+  useAuth,
+  TabMismatchScreen,
+  WelcomeBackScreen,
+} from "./SessionRestoreProvider"
 import AuthLoadingScreen from "./AuthLoadingScreen"
 
-const AUTH_TIMEOUT_MS = 5000
+const WELCOME_BACK_DURATION_MS = 2000
 
-export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+function AuthGuardInner({ children }: { children: React.ReactNode }) {
+  const { state } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const timedOut = useRef(false)
+  const [showWelcome, setShowWelcome] = useState(false)
 
+  // Redirect guests to login (defense-in-depth, middleware should already do this)
   useEffect(() => {
-    const supabase = createClient()
-    let cancelled = false
-
-    const timeoutId = setTimeout(() => {
-      if (!cancelled) {
-        timedOut.current = true
-        const redirect = searchParams.get("redirect") || "/auth/login"
-        const params = new URLSearchParams({ redirect: window.location.pathname })
-        router.push(`${redirect}?${params.toString()}`)
-        setIsAuthenticated(false)
-      }
-    }, AUTH_TIMEOUT_MS)
-
-    supabase.auth
-      .getUser()
-      .then(({ data: { user } }) => {
-        if (cancelled) return
-        clearTimeout(timeoutId)
-        if (user) {
-          setIsAuthenticated(true)
-        } else {
-          const redirect = searchParams.get("redirect") || "/auth/login"
-          const params = new URLSearchParams({ redirect: window.location.pathname })
-          router.push(`${redirect}?${params.toString()}`)
-          setIsAuthenticated(false)
-        }
+    if (state.status === "guest") {
+      const params = new URLSearchParams({
+        redirect: window.location.pathname,
       })
-      .catch(() => {
-        if (cancelled) return
-        clearTimeout(timeoutId)
-        const redirect = searchParams.get("redirect") || "/auth/login"
-        const params = new URLSearchParams({ redirect: window.location.pathname })
-        router.push(`${redirect}?${params.toString()}`)
-        setIsAuthenticated(false)
-      })
-
-    return () => {
-      cancelled = true
-      clearTimeout(timeoutId)
+      router.push(`/auth/login?${params.toString()}`)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [state, router])
 
-  if (isAuthenticated === null) {
+  // Show welcome-back screen briefly for restored sessions
+  useEffect(() => {
+    if (state.status === "authenticated" && state.isRestored) {
+      setShowWelcome(true)
+      const timer = setTimeout(() => setShowWelcome(false), WELCOME_BACK_DURATION_MS)
+      return () => clearTimeout(timer)
+    }
+  }, [state])
+
+  if (state.status === "loading") {
     return <AuthLoadingScreen />
   }
 
-  if (!isAuthenticated) {
-    return null
+  if (state.status === "tab_mismatch") {
+    return <TabMismatchScreen message={state.message} />
+  }
+
+  if (state.status === "guest") {
+    return <AuthLoadingScreen />
+  }
+
+  if (showWelcome) {
+    return <WelcomeBackScreen />
   }
 
   return <>{children}</>
+}
+
+export default function AuthGuard({ children }: { children: React.ReactNode }) {
+  return <AuthGuardInner>{children}</AuthGuardInner>
 }

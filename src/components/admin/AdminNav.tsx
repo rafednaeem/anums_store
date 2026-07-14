@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { clearAllSessionData } from "@/lib/session"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -47,13 +48,7 @@ export function AdminNav() {
       return
     }
 
-    // Clear all client storage on admin logout
-    try {
-      localStorage.clear()
-      sessionStorage.clear()
-    } catch {
-      // Storage unavailable
-    }
+    clearAllSessionData()
 
     toast.success("Logged out successfully")
     router.push("/auth/login")

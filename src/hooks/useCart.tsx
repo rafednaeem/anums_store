@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { isSessionOwner, getRememberMe } from "@/lib/session"
 
 export type CartItem = {
   id: string
@@ -105,6 +106,13 @@ function mergeCarts(guestItems: CartItem[], dbItems: CartItem[]): CartItem[] {
   return Array.from(merged.values())
 }
 
+function canAccessDbCart(): boolean {
+  // A tab can access the DB cart if:
+  // 1. It owns the session (tab-scoped), OR
+  // 2. "Remember Me" is set (persistent session, any tab can access)
+  return isSessionOwner() || getRememberMe().rememberMe
+}
+
 async function syncGuestCartToDb(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
@@ -113,7 +121,6 @@ async function syncGuestCartToDb(
 ): Promise<CartItem[]> {
   if (guestItems.length === 0) return []
 
-  // Find or create user cart
   const { data: existingCart } = await supabase
     .from("carts")
     .select("id")
@@ -134,7 +141,6 @@ async function syncGuestCartToDb(
 
   if (!cartId) return guestItems
 
-  // Load existing DB cart items
   const { data: dbCartItems } = await supabase
     .from("cart_items")
     .select("id, product_id, variant_id, quantity, price_snapshot")
@@ -154,21 +160,42 @@ async function syncGuestCartToDb(
 
   const merged = mergeCarts(guestItems, dbItems)
 
-  // Replace DB cart items with merged items
   await supabase.from("cart_items").delete().eq("cart_id", cartId)
 
   for (const item of merged) {
-    const price = item.price
     await supabase.from("cart_items").insert({
       cart_id: cartId,
       product_id: item.product_id,
       variant_id: item.variant_id || null,
       quantity: item.quantity,
-      price_snapshot: price,
+      price_snapshot: item.price,
     })
   }
 
   return merged
+}
+
+async function loadDbCart(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string
+): Promise<CartItem[]> {
+  const { data: dbCartItems } = await supabase
+    .from("cart_items")
+    .select("id, product_id, variant_id, quantity, price_snapshot")
+    .eq("cart_id", userId)
+
+  if (!dbCartItems || dbCartItems.length === 0) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return dbCartItems.map((item: any) => ({
+    id: item.id,
+    product_id: item.product_id,
+    variant_id: item.variant_id,
+    name: "",
+    price: item.price_snapshot,
+    quantity: item.quantity,
+  }))
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -185,38 +212,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       const newUserId = session?.user?.id ?? null
 
-      if (event === "SIGNED_IN" && newUserId && !userId) {
-        // User just logged in: merge guest cart into DB cart
-        const guestItems = loadCart(GUEST_CART_KEY)
+      if (event === "SIGNED_IN" && newUserId) {
+        if (canAccessDbCart()) {
+          // This tab owns the session (or "Remember Me" is set): merge/ load DB cart
+          const guestItems = loadCart(GUEST_CART_KEY)
 
-        if (guestItems.length > 0) {
-          const merged = await syncGuestCartToDb(supabase, newUserId, guestItems)
-          setItems(merged)
-          clearGuestCart()
-        } else {
-          // No guest items - just load DB cart
-          const { data: dbCartItems } = await supabase
-            .from("cart_items")
-            .select("id, product_id, variant_id, quantity, price_snapshot")
-            .eq("cart_id", newUserId)
-
-          if (dbCartItems && dbCartItems.length > 0) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const dbItems: CartItem[] = dbCartItems.map((item: any) => ({
-              id: item.id,
-              product_id: item.product_id,
-              variant_id: item.variant_id,
-              name: "",
-              price: item.price_snapshot,
-              quantity: item.quantity,
-            }))
-            setItems(dbItems)
+          if (guestItems.length > 0) {
+            const merged = await syncGuestCartToDb(supabase, newUserId, guestItems)
+            setItems(merged)
+            clearGuestCart()
           } else {
-            setItems([])
+            const dbItems = await loadDbCart(supabase, newUserId)
+            setItems(dbItems)
           }
+        } else {
+          // Tab doesn't own the session: stay as guest cart
+          const guestItems = loadCart(GUEST_CART_KEY)
+          setItems(guestItems)
         }
 
-        setUserId(newUserId)
+        setUserId(canAccessDbCart() ? newUserId : null)
         setIsLoading(false)
         isInitialLoad.current = false
         return
@@ -232,41 +247,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
 
       if (isInitialLoad.current) {
-        // First load: check session directly
-        if (newUserId !== userId) {
+        if (newUserId && canAccessDbCart()) {
           setUserId(newUserId)
-
-          if (newUserId) {
-            // Authenticated user: load DB cart
-            const { data: dbCartItems } = await supabase
-              .from("cart_items")
-              .select("id, product_id, variant_id, quantity, price_snapshot")
-              .eq("cart_id", newUserId)
-
-            if (dbCartItems && dbCartItems.length > 0) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const dbItems: CartItem[] = dbCartItems.map((item: any) => ({
-                id: item.id,
-                product_id: item.product_id,
-                variant_id: item.variant_id,
-                name: "",
-                price: item.price_snapshot,
-                quantity: item.quantity,
-              }))
-              setItems(dbItems)
-            } else {
-              setItems([])
-            }
-          } else {
-            // Guest: load from sessionStorage
-            const cartKey = getCartKey(null)
-            const loadedItems = loadCart(cartKey)
-            setItems(loadedItems)
-          }
-
-          setIsLoading(false)
-          isInitialLoad.current = false
+          const dbItems = await loadDbCart(supabase, newUserId)
+          setItems(dbItems)
+        } else {
+          setUserId(null)
+          const guestItems = loadCart(GUEST_CART_KEY)
+          setItems(guestItems)
         }
+
+        setIsLoading(false)
+        isInitialLoad.current = false
       }
     })
 
@@ -274,9 +266,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const fallbackTimer = setTimeout(() => {
       if (isInitialLoad.current) {
         setUserId(null)
-        const cartKey = getCartKey(null)
-        const loadedItems = loadCart(cartKey)
-        setItems(loadedItems)
+        const guestItems = loadCart(GUEST_CART_KEY)
+        setItems(guestItems)
         setIsLoading(false)
         isInitialLoad.current = false
       }

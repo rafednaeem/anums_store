@@ -13,6 +13,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
 import { loginSchema, type LoginInput } from "@/lib/validations"
+import {
+  setSessionOwner,
+  setRememberMe,
+  clearRememberMe,
+} from "@/lib/session"
 
 export function LoginForm() {
   const router = useRouter()
@@ -57,17 +62,21 @@ export function LoginForm() {
         return
       }
 
+      // Mark this tab as the session owner
+      setSessionOwner()
+
+      // Handle Remember Me persistence
+      if (data.remember_me) {
+        setRememberMe(user.id)
+      } else {
+        clearRememberMe()
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single()
-
-      if (data.remember_me) {
-        localStorage.setItem("remember_me", "true")
-      } else {
-        localStorage.removeItem("remember_me")
-      }
 
       if (profile?.role === "admin") {
         toast.success("Welcome back, Admin!")

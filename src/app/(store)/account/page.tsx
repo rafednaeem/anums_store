@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Package, MapPin, Heart, LogOut, User } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { clearAllSessionData } from "@/lib/session"
 import AuthGuard from "@/components/shared/AuthGuard"
 import { Button } from "@/components/ui/button"
 
@@ -59,6 +60,7 @@ function AccountContent() {
   async function handleSignOut() {
     setSigningOut(true)
     await supabase.auth.signOut()
+    clearAllSessionData()
     router.push("/")
   }
 

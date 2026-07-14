@@ -3,6 +3,7 @@ import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { CartProvider } from "@/hooks/useCart";
+import AuthProvider from "@/components/shared/SessionRestoreProvider";
 import { storeName } from "@/lib/constants";
 
 const inter = Inter({
@@ -64,7 +65,9 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased`}>
         <CartProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
           <Toaster richColors position="top-right" />
         </CartProvider>
       </body>
