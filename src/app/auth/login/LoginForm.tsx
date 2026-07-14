@@ -17,14 +17,24 @@ import {
   setSessionOwner,
   setRememberMe,
   clearRememberMe,
+  generateSessionToken,
+  setSessionTokenCookie,
+  isStoredSessionActive,
 } from "@/lib/session"
 import { useAuth } from "@/components/shared/SessionRestoreProvider"
+
+const SESSION_DENIED_MSG =
+  "This account is already signed in on another device or browser. Please sign out there before signing in here."
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get("redirect") || "/account"
+  const errorParam = searchParams.get("error")
   const [isLoading, setIsLoading] = useState(false)
+  const [sessionDenied, setSessionDenied] = useState(
+    errorParam === "session_superseded" ? SESSION_DENIED_MSG : ""
+  )
   const { setAuthenticated } = useAuth()
 
   const {
@@ -42,6 +52,7 @@ export function LoginForm() {
 
   async function onSubmit(data: LoginInput) {
     setIsLoading(true)
+    setSessionDenied("")
     const supabase = createClient()
 
     try {
@@ -62,6 +73,46 @@ export function LoginForm() {
       if (!user) {
         toast.error("Failed to get user information")
         return
+      }
+
+      // ── Single-session enforcement (customers only) ──────────
+      // Check if this account already has an active session elsewhere.
+      // Must run BEFORE we set ownership / cookie so we can roll back cleanly.
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, active_session_token, active_session_at")
+          .eq("id", user.id)
+          .single()
+
+        const isCustomer = profile?.role !== "admin"
+
+        if (isCustomer && profile?.active_session_token) {
+          // Another session exists — is it still alive?
+          if (isStoredSessionActive(profile.active_session_at)) {
+            await supabase.auth.signOut()
+            setIsLoading(false)
+            setSessionDenied(SESSION_DENIED_MSG)
+            return
+          }
+        }
+
+        // ── No blocking session — claim this one ──────────────
+        const token = generateSessionToken()
+
+        if (isCustomer) {
+          await supabase
+            .from("profiles")
+            .update({
+              active_session_token: token,
+              active_session_at: new Date().toISOString(),
+            })
+            .eq("id", user.id)
+
+          setSessionTokenCookie(token)
+        }
+      } catch {
+        // Profile query failed (transient DB issue) — allow login (fail-open)
       }
 
       // Set storage values BEFORE updating AuthProvider state,
@@ -100,6 +151,12 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {sessionDenied && (
+        <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          {sessionDenied}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input

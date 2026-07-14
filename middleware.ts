@@ -1,6 +1,8 @@
 import { updateSession } from "@/lib/supabase/middleware";
 import { type NextRequest } from "next/server";
 
+const SESSION_TOKEN_COOKIE = "app_session_token";
+
 export async function middleware(request: NextRequest) {
   const { supabase, response } = await updateSession(request);
 
@@ -19,6 +21,7 @@ export async function middleware(request: NextRequest) {
 
   // ── /admin/* routes ──────────────────────────────────────────
   // Require authenticated admin (dual-check: JWT metadata + DB profile)
+  // No session-token check — admin auth is untouched.
   if (pathname.startsWith("/admin")) {
     if (!user) {
       const loginUrl = new URL("/auth/login", request.url);
@@ -53,12 +56,45 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── /account/* routes ────────────────────────────────────────
-  // Require any authenticated user
+  // Require any authenticated user + valid single-session token
   if (pathname.startsWith("/account")) {
     if (!user) {
       const loginUrl = new URL("/auth/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return Response.redirect(loginUrl);
+    }
+
+    // Skip session-token check for admin users
+    if (user.app_metadata?.role === "admin") {
+      return response;
+    }
+
+    // ── Single-session enforcement ───────────────────────────
+    const sessionToken = request.cookies.get(SESSION_TOKEN_COOKIE)?.value;
+
+    if (!sessionToken) {
+      const loginUrl = new URL("/auth/login", request.url);
+      loginUrl.searchParams.set("error", "session_superseded");
+      return Response.redirect(loginUrl);
+    }
+
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("active_session_token")
+        .eq("id", user.id)
+        .single();
+
+      if (
+        !profile ||
+        profile.active_session_token !== sessionToken
+      ) {
+        const loginUrl = new URL("/auth/login", request.url);
+        loginUrl.searchParams.set("error", "session_superseded");
+        return Response.redirect(loginUrl);
+      }
+    } catch {
+      // Profile query failed (transient DB issue) — allow access (fail-open)
     }
   }
 

@@ -189,3 +189,55 @@ export function evaluateSession(
   // Heartbeat is stale or absent — no active tab, this is a leftover cookie
   return { status: "stale_session" }
 }
+
+// ── Single Active Session (cross-device) ──────────────────────────
+// Server-side enforcement: one active session per customer account.
+// The session token is stored in a cookie (read by middleware) and
+// in the profiles table (authoritative source).
+
+export const SESSION_TOKEN_COOKIE = "app_session_token"
+export const SESSION_ACTIVE_THRESHOLD_MS = 30 * 60 * 1000 // 30 minutes
+export const DB_HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+
+export function setSessionTokenCookie(token: string): void {
+  if (typeof document === "undefined") return
+  const parts = [
+    `${SESSION_TOKEN_COOKIE}=${token}`,
+    "path=/",
+    `max-age=${30 * 24 * 60 * 60}`,
+    "SameSite=Lax",
+  ]
+  if (window.location.protocol === "https:") {
+    parts.push("Secure")
+  }
+  document.cookie = parts.join("; ")
+}
+
+export function getSessionTokenCookie(): string | null {
+  if (typeof document === "undefined") return null
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${SESSION_TOKEN_COOKIE}=([^;]*)`)
+  )
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+export function clearSessionTokenCookie(): void {
+  if (typeof document === "undefined") return
+  document.cookie = `${SESSION_TOKEN_COOKIE}=; path=/; max-age=0`
+}
+
+export function generateSessionToken(): string {
+  return crypto.randomUUID()
+}
+
+/**
+ * Check whether the stored active session is still "alive".
+ * Returns true if the session was recently heartbeated (within threshold).
+ */
+export function isStoredSessionActive(
+  activeSessionAt: string | null | undefined
+): boolean {
+  if (!activeSessionAt) return false
+  const elapsed = Date.now() - new Date(activeSessionAt).getTime()
+  return elapsed < SESSION_ACTIVE_THRESHOLD_MS
+}

@@ -18,7 +18,9 @@ import {
   updateHeartbeat,
   clearHeartbeat,
   getRememberMe,
+  clearSessionTokenCookie,
   HEARTBEAT_INTERVAL_MS,
+  DB_HEARTBEAT_INTERVAL_MS,
   type SessionState,
 } from "@/lib/session"
 import AuthLoadingScreen from "./AuthLoadingScreen"
@@ -44,6 +46,7 @@ function applySession(
   if (sessionState.status === "stale_session") {
     const supabase = createClient()
     clearAllSessionData()
+    clearSessionTokenCookie()
     supabase.auth.signOut()
     setState({ status: "guest" })
     return
@@ -124,6 +127,30 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer)
   }, [])
 
+  // ── DB heartbeat: keeps active_session_at fresh (single-session enforcement)
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      const current = stateRef.current
+      if (current.status === "authenticated") {
+        try {
+          const supabase = createClient()
+          const {
+            data: { user },
+          } = await supabase.auth.getUser()
+          if (user) {
+            await supabase
+              .from("profiles")
+              .update({ active_session_at: new Date().toISOString() })
+              .eq("id", user.id)
+          }
+        } catch {
+          // Best-effort — don't crash on DB failure
+        }
+      }
+    }, DB_HEARTBEAT_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [])
+
   // ── Cleanup on tab/window close ────────────────────────────
   useEffect(() => {
     function handleCleanup() {
@@ -159,6 +186,26 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    // Clear single-session record from DB (customers only)
+    if (user) {
+      try {
+        await supabase
+          .from("profiles")
+          .update({
+            active_session_token: null,
+            active_session_at: null,
+          })
+          .eq("id", user.id)
+      } catch {
+        // Best-effort — don't block sign-out on DB failure
+      }
+    }
+
+    clearSessionTokenCookie()
     clearAllSessionData()
     clearHeartbeat()
     await supabase.auth.signOut()
