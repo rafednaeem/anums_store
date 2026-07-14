@@ -18,12 +18,14 @@ import {
   setRememberMe,
   clearRememberMe,
 } from "@/lib/session"
+import { useAuth } from "@/components/shared/SessionRestoreProvider"
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get("redirect") || "/account"
   const [isLoading, setIsLoading] = useState(false)
+  const { setAuthenticated } = useAuth()
 
   const {
     register,
@@ -62,15 +64,19 @@ export function LoginForm() {
         return
       }
 
-      // Mark this tab as the session owner
+      // Set storage values BEFORE updating AuthProvider state,
+      // so evaluateSession reads the correct ownership flag.
       setSessionOwner()
 
-      // Handle Remember Me persistence
       if (data.remember_me) {
         setRememberMe(user.id)
       } else {
         clearRememberMe()
       }
+
+      // Update AuthProvider state — evaluateSession will see
+      // the ownership flag we just set and return "authenticated".
+      setAuthenticated(user)
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -85,8 +91,6 @@ export function LoginForm() {
         toast.success("Welcome back!")
         router.push(redirect)
       }
-
-      router.refresh()
     } catch {
       toast.error("An unexpected error occurred. Please try again.")
     } finally {

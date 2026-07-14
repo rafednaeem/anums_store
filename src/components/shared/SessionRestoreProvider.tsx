@@ -15,6 +15,10 @@ import {
   evaluateSession,
   setSessionOwner,
   clearAllSessionData,
+  updateHeartbeat,
+  clearHeartbeat,
+  getRememberMe,
+  HEARTBEAT_INTERVAL_MS,
   type SessionState,
 } from "@/lib/session"
 import AuthLoadingScreen from "./AuthLoadingScreen"
@@ -22,6 +26,7 @@ import AuthLoadingScreen from "./AuthLoadingScreen"
 interface AuthContextValue {
   state: SessionState
   signOut: () => Promise<void>
+  setAuthenticated: (user: { id: string }) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -32,77 +37,143 @@ export function useAuth() {
   return ctx
 }
 
+function applySession(
+  sessionState: SessionState,
+  setState: React.Dispatch<React.SetStateAction<SessionState>>
+) {
+  if (sessionState.status === "stale_session") {
+    const supabase = createClient()
+    clearAllSessionData()
+    supabase.auth.signOut()
+    setState({ status: "guest" })
+    return
+  }
+
+  setState(sessionState)
+
+  if (
+    sessionState.status === "authenticated" &&
+    !getRememberMe().rememberMe
+  ) {
+    updateHeartbeat()
+  }
+}
+
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>({ status: "loading" })
   const router = useRouter()
   const initialised = useRef(false)
+  const stateRef = useRef(state)
+  stateRef.current = state
 
+  // ── Initial session check + sign-out listener ──────────────
   useEffect(() => {
-    if (initialised.current) return
-    initialised.current = true
-
     const supabase = createClient()
     let cancelled = false
 
-    async function checkSession() {
+    async function initSession() {
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (cancelled) return
 
-      const sessionState = evaluateSession(user)
-
-      if (sessionState.status === "loading") {
+      if (!user) {
         setState({ status: "guest" })
         return
       }
 
-      setState(sessionState)
+      applySession(evaluateSession(user), setState)
     }
 
-    checkSession()
+    if (!initialised.current) {
+      initialised.current = true
+      initSession()
+    }
+
+    // Listen for sign-out events (token expiry, other tabs, etc.)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event) => {
+      if (cancelled) return
+
+      if (event === "SIGNED_OUT") {
+        clearHeartbeat()
+        clearAllSessionData()
+        setState({ status: "guest" })
+      }
+    })
 
     return () => {
       cancelled = true
+      subscription.unsubscribe()
     }
   }, [])
 
-  // Mark this tab as the session owner after successful login
+  // ── Heartbeat: active tab keeps timestamp fresh ────────────
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const current = stateRef.current
+      if (
+        current.status === "authenticated" &&
+        !getRememberMe().rememberMe
+      ) {
+        updateHeartbeat()
+      }
+    }, HEARTBEAT_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [])
+
+  // ── Cleanup on tab/window close ────────────────────────────
+  useEffect(() => {
+    function handleCleanup() {
+      try {
+        sessionStorage.removeItem("session_owner_tab")
+        clearHeartbeat()
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener("beforeunload", handleCleanup)
+    window.addEventListener("pagehide", handleCleanup)
+    return () => {
+      window.removeEventListener("beforeunload", handleCleanup)
+      window.removeEventListener("pagehide", handleCleanup)
+    }
+  }, [])
+
+  // ── Mark this tab as session owner after login ─────────────
   useEffect(() => {
     if (state.status === "authenticated" && !state.isRestored) {
       setSessionOwner()
     }
   }, [state])
 
-  // Best-effort cleanup: clear session ownership on tab close
-  useEffect(() => {
-    function handleBeforeUnload() {
-      try {
-        sessionStorage.removeItem("session_owner_tab")
-      } catch { /* ignore */ }
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload)
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  // ── Explicit login handler (called by LoginForm) ──────────
+  // Avoids race condition with onAuthStateChange — the LoginForm
+  // sets sessionStorage values BEFORE calling this, so evaluateSession
+  // reads the correct ownership state.
+  const setAuthenticated = useCallback((user: { id: string }) => {
+    applySession(evaluateSession(user), setState)
   }, [])
 
   const signOut = useCallback(async () => {
     const supabase = createClient()
-    await supabase.auth.signOut()
     clearAllSessionData()
+    clearHeartbeat()
+    await supabase.auth.signOut()
     setState({ status: "guest" })
     router.push("/")
   }, [router])
 
   return (
-    <AuthContext.Provider value={{ state, signOut }}>
+    <AuthContext.Provider value={{ state, signOut, setAuthenticated }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
 // ── Tab Mismatch Screen ───────────────────────────────────────────
-// Shown when a new tab detects an active session it doesn't own.
 
 export function TabMismatchScreen({ message }: { message: string }) {
   const router = useRouter()
@@ -131,7 +202,6 @@ export function TabMismatchScreen({ message }: { message: string }) {
 }
 
 // ── Welcome Back Screen ───────────────────────────────────────────
-// Shown when a returning "Remember Me" user session is being restored.
 
 export function WelcomeBackScreen() {
   return <AuthLoadingScreen message="Welcome back to Anum's Shop. Signing you in..." />

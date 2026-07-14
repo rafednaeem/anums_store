@@ -2,6 +2,10 @@ const TAB_ID_KEY = "tab_id"
 const SESSION_OWNER_KEY = "session_owner_tab"
 const REMEMBER_ME_KEY = "remember_me"
 const REMEMBER_ME_USER_KEY = "remember_me_user_id"
+const HEARTBEAT_KEY = "session_heartbeat"
+
+export const HEARTBEAT_INTERVAL_MS = 5000
+export const HEARTBEAT_EXPIRY_MS = 12000
 
 function getStorage(storage: "session" | "local"): Storage | null {
   if (typeof window === "undefined") return null
@@ -54,6 +58,38 @@ export function isSessionOwner(): boolean {
   return ownerTab === getTabId()
 }
 
+// ── Heartbeat ─────────────────────────────────────────────────────
+// Cross-tab heartbeat stored in localStorage.
+// The active tab (without Remember Me) periodically writes a timestamp.
+// New tabs check this to distinguish "genuine other tab active" from
+// "browser was closed, stale cookie".
+
+export function updateHeartbeat(): void {
+  const storage = getStorage("local")
+  if (!storage) return
+  try {
+    storage.setItem(HEARTBEAT_KEY, String(Date.now()))
+  } catch {
+    // Storage full or unavailable
+  }
+}
+
+export function isHeartbeatStale(): boolean {
+  const storage = getStorage("local")
+  if (!storage) return true
+  const raw = storage.getItem(HEARTBEAT_KEY)
+  if (!raw) return true
+  const timestamp = parseInt(raw, 10)
+  if (isNaN(timestamp)) return true
+  return Date.now() - timestamp > HEARTBEAT_EXPIRY_MS
+}
+
+export function clearHeartbeat(): void {
+  const storage = getStorage("local")
+  if (!storage) return
+  storage.removeItem(HEARTBEAT_KEY)
+}
+
 // ── Remember Me ───────────────────────────────────────────────────
 // "Remember Me" persists in localStorage (shared across tabs, survives restart).
 // When set, any tab can restore the session on page load.
@@ -97,6 +133,7 @@ export function clearAllSessionData(): void {
   if (local) {
     local.removeItem(REMEMBER_ME_KEY)
     local.removeItem(REMEMBER_ME_USER_KEY)
+    local.removeItem(HEARTBEAT_KEY)
   }
 }
 
@@ -108,6 +145,7 @@ export type SessionState =
   | { status: "guest" }
   | { status: "authenticated"; userId: string; isRestored: boolean }
   | { status: "tab_mismatch"; message: string }
+  | { status: "stale_session" }
 
 export function evaluateSession(
   supabaseUser: { id: string } | null
@@ -137,10 +175,17 @@ export function evaluateSession(
     return { status: "authenticated", userId: supabaseUser.id, isRestored: false }
   }
 
-  // Tab doesn't own the session and no "Remember Me"
-  return {
-    status: "tab_mismatch",
-    message:
-      "Your account is already active in another tab. Please continue there or sign in again.",
+  // Tab doesn't own the session and no "Remember Me".
+  // Check if another tab is actively updating the heartbeat.
+  if (!isHeartbeatStale()) {
+    // Heartbeat is fresh — another tab genuinely has this session
+    return {
+      status: "tab_mismatch",
+      message:
+        "Your account is already active in another tab. Please continue there or sign in again.",
+    }
   }
+
+  // Heartbeat is stale or absent — no active tab, this is a leftover cookie
+  return { status: "stale_session" }
 }
