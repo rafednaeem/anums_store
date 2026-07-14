@@ -4,9 +4,16 @@ import { type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const { supabase, response } = await updateSession(request);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+
+  try {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    user = authUser;
+  } catch {
+    return response;
+  }
 
   const pathname = request.nextUrl.pathname;
 
@@ -17,13 +24,19 @@ export async function middleware(request: NextRequest) {
       return Response.redirect(loginUrl);
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
-    if (!profile || profile.role !== "admin") {
+      if (!profile || profile.role !== "admin") {
+        const loginUrl = new URL("/auth/login", request.url);
+        loginUrl.searchParams.set("error", "unauthorized");
+        return Response.redirect(loginUrl);
+      }
+    } catch {
       const loginUrl = new URL("/auth/login", request.url);
       loginUrl.searchParams.set("error", "unauthorized");
       return Response.redirect(loginUrl);

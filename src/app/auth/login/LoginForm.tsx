@@ -63,6 +63,12 @@ export function LoginForm() {
         .eq("id", user.id)
         .single()
 
+      if (data.remember_me) {
+        localStorage.setItem("remember_me", "true")
+      } else {
+        localStorage.removeItem("remember_me")
+      }
+
       if (profile?.role === "admin") {
         toast.success("Welcome back, Admin!")
         router.push("/admin")
