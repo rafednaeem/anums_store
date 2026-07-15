@@ -170,6 +170,14 @@ export default function CheckoutPage() {
     Record<string, number>
   >({})
   const [isUploadingProof, setIsUploadingProof] = useState(false)
+  const [orderError, setOrderError] = useState<{
+    message: string
+    stage?: string
+    code?: string
+    details?: string
+    hint?: string
+    debug?: Record<string, unknown>
+  } | null>(null)
 
   const supabase = createClient()
 
@@ -332,43 +340,83 @@ export default function CheckoutPage() {
 
   async function onSubmit() {
     setIsSubmitting(true)
+    setOrderError(null)
     try {
       const formData = watch()
       const idempotencyKey = crypto.randomUUID()
 
+      const requestBody = {
+        shipping: {
+          full_name: formData.full_name,
+          phone: formData.phone,
+          address_line1: formData.address_line1,
+          address_line2: formData.address_line2,
+          city: formData.city,
+          province: formData.province,
+          postal_code: formData.postal_code,
+          guest_email: formData.guest_email,
+        },
+        payment_method: "bank_transfer",
+        payment_proof_url: paymentProofUrl,
+        notes: formData.notes,
+        idempotency_key: idempotencyKey,
+        items: items.map((item) => ({
+          product_id: item.product_id,
+          variant_id: item.variant_id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          size: item.size,
+          color: item.color,
+        })),
+      }
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shipping: {
-            full_name: formData.full_name,
-            phone: formData.phone,
-            address_line1: formData.address_line1,
-            address_line2: formData.address_line2,
-            city: formData.city,
-            province: formData.province,
-            postal_code: formData.postal_code,
-            guest_email: formData.guest_email,
-          },
-          payment_method: "bank_transfer",
-          payment_proof_url: paymentProofUrl,
-          notes: formData.notes,
-          idempotency_key: idempotencyKey,
-          items: items.map((item) => ({
-            product_id: item.product_id,
-            variant_id: item.variant_id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image,
-            size: item.size,
-            color: item.color,
-          })),
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to create order")
+
+      if (!res.ok) {
+        const errorDetail = {
+          message: data.message || data.error || "Failed to create order",
+          stage: data.stage || null,
+          code: data.code || null,
+          details: data.details || null,
+          hint: data.hint || null,
+          debug: data.debug || null,
+        }
+
+        console.groupCollapsed(
+          "%c[ORDER CREATION FAILED]",
+          "color: red; font-weight: bold; font-size: 14px"
+        )
+        console.error("Message:", errorDetail.message)
+        if (errorDetail.stage) console.error("Stage:", errorDetail.stage)
+        if (errorDetail.code) console.error("Code:", errorDetail.code)
+        if (errorDetail.details) console.error("Details:", errorDetail.details)
+        if (errorDetail.hint) console.error("Hint:", errorDetail.hint)
+        console.error("HTTP Status:", res.status)
+        console.error("Endpoint:", "/api/orders")
+        console.error("Guest:", items.length > 0 ? "check debug" : "unknown")
+        if (errorDetail.debug) {
+          console.error("Debug Info:", errorDetail.debug)
+        }
+        console.error("Request Payload:", {
+          ...requestBody,
+          payment_proof_url: requestBody.payment_proof_url ? "[present]" : "[missing]",
+          items: `${requestBody.items.length} items`,
+        })
+        console.error("Response Payload:", data)
+        console.error("Timestamp:", new Date().toISOString())
+        console.groupEnd()
+
+        setOrderError(errorDetail)
+        throw new Error(errorDetail.message)
+      }
 
       setOrderId(data.orderId)
       setOrderNumber(data.orderNumber)
@@ -377,6 +425,19 @@ export default function CheckoutPage() {
       toast.success("Order placed successfully!")
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to place order"
+      if (!orderError) {
+        console.groupCollapsed(
+          "%c[ORDER CREATION FAILED - NETWORK/UNKNOWN]",
+          "color: red; font-weight: bold; font-size: 14px"
+        )
+        console.error("Message:", message)
+        console.error("Endpoint:", "/api/orders")
+        console.error("Timestamp:", new Date().toISOString())
+        if (err instanceof Error && err.stack) {
+          console.error("Stack Trace:", err.stack)
+        }
+        console.groupEnd()
+      }
       toast.error(message)
     } finally {
       setIsSubmitting(false)
@@ -453,6 +514,7 @@ export default function CheckoutPage() {
             total={calculatedTotal}
             shippingInfo={watch()}
             isSubmitting={isSubmitting}
+            orderError={orderError}
             onSubmit={onSubmit}
             onBack={() => setStep(2)}
           />
@@ -769,6 +831,7 @@ function ReviewStep({
   total,
   shippingInfo,
   isSubmitting,
+  orderError,
   onSubmit,
   onBack,
 }: {
@@ -778,11 +841,100 @@ function ReviewStep({
   total: number
   shippingInfo: ShippingInfo
   isSubmitting: boolean
+  orderError: {
+    message: string
+    stage?: string
+    code?: string
+    details?: string
+    hint?: string
+    debug?: Record<string, unknown>
+  } | null
   onSubmit: () => void
   onBack: () => void
 }) {
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false)
+
   return (
     <div className="space-y-6">
+      {orderError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100">
+              <span className="text-red-600 text-sm font-bold">!</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-heading text-lg font-bold text-red-800">
+                Order Creation Failed
+              </h3>
+              <p className="mt-1 text-sm text-red-700">
+                {orderError.stage
+                  ? `Failed at: ${orderError.stage}`
+                  : "An error occurred while processing your order."}
+              </p>
+              <p className="mt-1 text-sm text-red-600">
+                {orderError.message}
+              </p>
+
+              {orderError.hint && (
+                <p className="mt-2 text-sm text-red-700 italic">
+                  Hint: {orderError.hint}
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                className="mt-3 text-xs font-medium text-red-700 underline underline-offset-2 hover:text-red-900"
+              >
+                {showTechnicalDetails ? "Hide Technical Details" : "Show Technical Details"}
+              </button>
+
+              {showTechnicalDetails && (
+                <div className="mt-3 rounded-md bg-white border border-red-200 p-4 text-xs font-mono text-left space-y-2 overflow-x-auto">
+                  {orderError.stage && (
+                    <div>
+                      <span className="font-semibold text-gray-700">Stage:</span>{" "}
+                      <span className="text-red-700">{orderError.stage}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-semibold text-gray-700">Message:</span>{" "}
+                    <span className="text-red-700">{orderError.message}</span>
+                  </div>
+                  {orderError.code && (
+                    <div>
+                      <span className="font-semibold text-gray-700">Code:</span>{" "}
+                      <span className="text-red-700">{orderError.code}</span>
+                    </div>
+                  )}
+                  {orderError.details && (
+                    <div>
+                      <span className="font-semibold text-gray-700">Details:</span>{" "}
+                      <span className="text-red-700 break-all">{orderError.details}</span>
+                    </div>
+                  )}
+                  {orderError.debug && (
+                    <div>
+                      <span className="font-semibold text-gray-700">Debug Info:</span>
+                      <pre className="mt-1 whitespace-pre-wrap break-all text-gray-600">
+                        {JSON.stringify(orderError.debug, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-semibold text-gray-700">Endpoint:</span>{" "}
+                    <span>/api/orders</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Timestamp:</span>{" "}
+                    <span>{new Date().toISOString()}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="rounded-lg border border-ethereal-silver/30 bg-white p-6">
         <h2 className="font-heading text-xl font-bold text-ethereal-dark">
           Review Your Order
