@@ -43,11 +43,11 @@ function buildErrorResponse(params: {
   const body: Any = {
     success: false,
     stage: params.stage,
-    message: isDev ? params.message : "Failed to create order",
-    code: isDev ? params.code ?? null : undefined,
-    details: isDev ? params.details ?? null : undefined,
-    hint: isDev ? params.hint ?? null : undefined,
-    debug: isDev ? params.debug ?? {} : undefined,
+    message: params.message,
+    code: params.code ?? null,
+    details: params.details ?? null,
+    hint: params.hint ?? null,
+    debug: params.debug ?? {},
   }
   return NextResponse.json(body, { status: params.status })
 }
@@ -589,14 +589,14 @@ export async function POST(req: Request) {
       {
         success: false,
         stage: "Unknown (unhandled exception)",
-        message: isDev ? (error.message || "Internal server error") : "Failed to create order",
-        code: isDev ? error?.code ?? null : undefined,
-        details: isDev ? error?.details ?? null : undefined,
-        hint: isDev ? error?.hint ?? null : undefined,
-        debug: isDev ? {
+        message: error.message || "Internal server error",
+        code: error?.code ?? null,
+        details: error?.details ?? null,
+        hint: error?.hint ?? null,
+        debug: {
           stack: error?.stack,
           timestamp: new Date().toISOString(),
-        } : undefined,
+        },
       },
       { status: 500 }
     )
