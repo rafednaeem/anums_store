@@ -28,44 +28,24 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   const { data: order, error } = await supabase
     .from("orders")
-    .select("*")
+    .select(`
+      *,
+      order_items (*),
+      payments (*),
+      order_timeline (*)
+    `)
     .eq("id", id)
     .single()
 
   if (error || !order) notFound()
 
-  const orderData = order as Order
-
-  const [{ data: orderItems, error: itemsError }, { data: payments, error: paymentsError }, { data: timeline, error: timelineError }] =
-    await Promise.all([
-      supabase
-        .from("order_items")
-        .select("*")
-        .eq("order_id", id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("payments")
-        .select("*")
-        .eq("order_id", id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("order_timeline")
-        .select("*")
-        .eq("order_id", id)
-        .order("created_at", { ascending: false }),
-    ])
-
-  if (itemsError) {
-    console.error("[Admin Order Detail] Failed to fetch order_items:", itemsError)
-  }
-  if (paymentsError) {
-    console.error("[Admin Order Detail] Failed to fetch payments:", paymentsError)
-  }
-  if (timelineError) {
-    console.error("[Admin Order Detail] Failed to fetch order_timeline:", timelineError)
+  const orderData = order as Order & {
+    order_items: OrderItem[]
+    payments: Payment[]
+    order_timeline: Timeline[]
   }
 
-  let items = (orderItems ?? []) as OrderItem[]
+  let items = (orderData.order_items ?? []) as OrderItem[]
 
   if (items.length === 0 && Array.isArray(orderData.items)) {
     items = (orderData.items as unknown as Array<Record<string, unknown>>).map((raw, idx) => ({
@@ -85,8 +65,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     })) as OrderItem[]
   }
 
-  const paymentList = (payments ?? []) as Payment[]
-  const timelineList = (timeline ?? []) as Timeline[]
+  const paymentList = (orderData.payments ?? []) as Payment[]
+  const timelineList = ((orderData.order_timeline ?? []) as Timeline[]).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
 
   const pendingPayment = paymentList.find((p) => p.status === "submitted")
 
