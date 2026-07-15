@@ -36,7 +36,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   const orderData = order as Order
 
-  const [{ data: orderItems }, { data: payments }, { data: timeline }] =
+  const [{ data: orderItems, error: itemsError }, { data: payments, error: paymentsError }, { data: timeline, error: timelineError }] =
     await Promise.all([
       supabase
         .from("order_items")
@@ -55,7 +55,36 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         .order("created_at", { ascending: false }),
     ])
 
-  const items = (orderItems ?? []) as OrderItem[]
+  if (itemsError) {
+    console.error("[Admin Order Detail] Failed to fetch order_items:", itemsError)
+  }
+  if (paymentsError) {
+    console.error("[Admin Order Detail] Failed to fetch payments:", paymentsError)
+  }
+  if (timelineError) {
+    console.error("[Admin Order Detail] Failed to fetch order_timeline:", timelineError)
+  }
+
+  let items = (orderItems ?? []) as OrderItem[]
+
+  if (items.length === 0 && Array.isArray(orderData.items)) {
+    items = (orderData.items as unknown as Array<Record<string, unknown>>).map((raw, idx) => ({
+      id: `jsonb-${idx}`,
+      order_id: orderData.id,
+      product_id: (raw.product_id as string) || "",
+      product_slug: (raw.product_slug as string) || "",
+      product_name: (raw.product_name as string) || "Unknown Product",
+      product_image: (raw.product_image as string) || null,
+      variant_id: (raw.variant_id as string) || null,
+      size: (raw.size as string) || null,
+      color: (raw.color as string) || null,
+      quantity: (raw.quantity as number) || 1,
+      unit_price: (raw.unit_price as number) || 0,
+      total_price: (raw.total_price as number) || 0,
+      created_at: orderData.created_at,
+    })) as OrderItem[]
+  }
+
   const paymentList = (payments ?? []) as Payment[]
   const timelineList = (timeline ?? []) as Timeline[]
 
@@ -220,19 +249,33 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status}
                       </Badge>
                     </div>
-                    {payment.proof_url && (
+                    {(payment.proof_url || payment.proof_filename) && (
                       <div className="mt-3">
                         <p className="mb-1 text-sm text-neutral-500 dark:text-neutral-400">
                           Payment Proof:
                         </p>
-                        <Image
-                          src={payment.proof_url}
-                          alt="Payment proof"
-                          width={200}
-                          height={200}
-                          className="rounded-md border border-neutral-200 dark:border-neutral-800"
-                          unoptimized={payment.proof_url.includes("supabase")}
-                        />
+                        {payment.proof_url ? (
+                          <a
+                            href={payment.proof_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <Image
+                              src={payment.proof_url}
+                              alt="Payment proof"
+                              width={200}
+                              height={200}
+                              className="rounded-md border border-neutral-200 dark:border-neutral-800"
+                              unoptimized
+                            />
+                          </a>
+                        ) : null}
+                        {payment.proof_filename && (
+                          <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
+                            {payment.proof_filename}
+                          </p>
+                        )}
                       </div>
                     )}
                     {payment.rejection_reason && (
