@@ -152,20 +152,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // ── Cleanup on tab/window close ────────────────────────────
+  // NOTE: We intentionally do NOT clear session_owner_tab or
+  // heartbeat here. sessionStorage auto-clears when the tab
+  // closes (browser behaviour), and the heartbeat naturally
+  // becomes stale once this tab stops updating it. Removing
+  // these values in beforeunload/pagehide also fires on
+  // same-origin navigations (e.g. window.location.href), which
+  // would destroy the session prematurely.
   useEffect(() => {
-    function handleCleanup() {
-      try {
-        sessionStorage.removeItem("session_owner_tab")
-        clearHeartbeat()
-      } catch {
-        /* ignore */
-      }
-    }
-    window.addEventListener("beforeunload", handleCleanup)
-    window.addEventListener("pagehide", handleCleanup)
     return () => {
-      window.removeEventListener("beforeunload", handleCleanup)
-      window.removeEventListener("pagehide", handleCleanup)
+      // No cleanup needed — let session state persist across
+      // same-origin navigations and expire naturally on tab close.
     }
   }, [])
 

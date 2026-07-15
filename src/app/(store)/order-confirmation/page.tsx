@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { formatPrice } from "@/lib/helpers"
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, whatsappNumber } from "@/lib/constants"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +18,7 @@ interface OrderRecord {
   id: string
   order_number: string
   user_id: string | null
+  guest_email: string | null
   customer_name: string
   address: string
   city: string
@@ -54,25 +56,68 @@ interface TimelineRecord {
   created_at: string
 }
 
-async function OrderDetails({ orderId }: { orderId: string }) {
+async function OrderDetails({ orderId, token }: { orderId: string; token?: string }) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const query = supabase
-    .from("orders")
-    .select(`
-      *,
-      order_items (*),
-      payments (*),
-      order_timeline (*)
-    `)
-    .eq("id", orderId)
-    .single()
+  let order: OrderRecord | null = null
 
-  const { data: order, error } = await query
+  if (user) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        order_items (*),
+        payments (*),
+        order_timeline (*)
+      `)
+      .eq("id", orderId)
+      .single()
 
-  if (error || !order) {
+    if (!error && data) {
+      const orderData = data as unknown as OrderRecord
+      if (orderData.user_id && orderData.user_id !== user.id) {
+        return (
+          <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
+            <h1 className="font-heading text-3xl font-bold text-ethereal-dark">
+              Access Denied
+            </h1>
+            <p className="mt-3 text-muted-foreground">
+              You don&apos;t have permission to view this order.
+            </p>
+            <Link
+              href="/shop"
+              className="mt-8 inline-flex items-center rounded-md bg-ethereal-dark px-6 py-3 text-sm font-medium text-white hover:bg-ethereal-dark/90"
+            >
+              Continue Shopping
+            </Link>
+          </div>
+        )
+      }
+      order = orderData
+    }
+  } else if (token) {
+    const serviceRole = createServiceRoleClient()
+
+    const { data, error } = await serviceRole
+      .from("orders")
+      .select(`
+        *,
+        order_items (*),
+        payments (*),
+        order_timeline (*)
+      `)
+      .eq("id", orderId)
+      .eq("guest_access_token", token)
+      .single()
+
+    if (!error && data) {
+      order = data as unknown as OrderRecord
+    }
+  }
+
+  if (!order) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
         <h1 className="font-heading text-3xl font-bold text-ethereal-dark">
@@ -91,33 +136,12 @@ async function OrderDetails({ orderId }: { orderId: string }) {
     )
   }
 
-  const orderData = order as unknown as OrderRecord
-
-  if (user && orderData.user_id && orderData.user_id !== user.id) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 lg:px-8">
-        <h1 className="font-heading text-3xl font-bold text-ethereal-dark">
-          Access Denied
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          You don&apos;t have permission to view this order.
-        </p>
-        <Link
-          href="/shop"
-          className="mt-8 inline-flex items-center rounded-md bg-ethereal-dark px-6 py-3 text-sm font-medium text-white hover:bg-ethereal-dark/90"
-        >
-          Continue Shopping
-        </Link>
-      </div>
-    )
-  }
-
-  const payment = orderData.payments?.[0]
-  const timeline = (orderData.order_timeline || []).sort(
+  const payment = order.payments?.[0]
+  const timeline = (order.order_timeline || []).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )
 
-  const whatsappLink = `https://wa.me/${whatsappNumber}?text=Hi%2C%20I%27d%20like%20to%20track%20my%20order%20${encodeURIComponent(orderData.order_number)}`
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=Hi%2C%20I%27d%20like%20to%20track%20my%20order%20${encodeURIComponent(order.order_number)}`
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -127,11 +151,11 @@ async function OrderDetails({ orderId }: { orderId: string }) {
             Order Confirmed
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Order #{orderData.order_number}
+            Order #{order.order_number}
           </p>
           <div className="mt-3 flex items-center justify-center gap-2">
             <Badge variant="secondary">
-              {ORDER_STATUS_LABELS[orderData.status as keyof typeof ORDER_STATUS_LABELS] || orderData.status}
+              {ORDER_STATUS_LABELS[order.status as keyof typeof ORDER_STATUS_LABELS] || order.status}
             </Badge>
             <Badge variant="outline">
               {payment ? (PAYMENT_STATUS_LABELS[payment.status as keyof typeof PAYMENT_STATUS_LABELS] || payment.status) : "Pending"}
@@ -143,7 +167,7 @@ async function OrderDetails({ orderId }: { orderId: string }) {
           <div className="pb-4">
             <h2 className="text-sm font-semibold text-ethereal-dark">Items</h2>
             <div className="mt-2 space-y-2">
-              {orderData.order_items?.map((item) => (
+              {order.order_items?.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <div>
                     <span className="font-medium">{item.product_name}</span>
@@ -160,10 +184,10 @@ async function OrderDetails({ orderId }: { orderId: string }) {
           <div className="py-4">
             <h2 className="text-sm font-semibold text-ethereal-dark">Shipping</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {orderData.customer_name}<br />
-              {orderData.address}<br />
-              {orderData.city}, {orderData.province}
-              {orderData.postal_code && <> {orderData.postal_code}</>}
+              {order.customer_name}<br />
+              {order.address}<br />
+              {order.city}, {order.province}
+              {order.postal_code && <> {order.postal_code}</>}
             </p>
           </div>
 
@@ -187,16 +211,16 @@ async function OrderDetails({ orderId }: { orderId: string }) {
           <div className="pt-4">
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Subtotal</span>
-              <span className="text-sm">{formatPrice(orderData.subtotal)}</span>
+              <span className="text-sm">{formatPrice(order.subtotal)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Shipping</span>
-              <span className="text-sm">{orderData.shipping === 0 ? "Free" : formatPrice(orderData.shipping)}</span>
+              <span className="text-sm">{order.shipping === 0 ? "Free" : formatPrice(order.shipping)}</span>
             </div>
             <div className="mt-2 flex justify-between border-t border-ethereal-silver/30 pt-2">
               <span className="font-semibold text-ethereal-dark">Total</span>
               <span className="font-heading text-lg font-bold text-ethereal-dark">
-                {formatPrice(orderData.total)}
+                {formatPrice(order.total)}
               </span>
             </div>
           </div>
@@ -262,9 +286,9 @@ function OrderConfirmationFallback() {
 export default async function OrderConfirmationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string }>
+  searchParams: Promise<{ id?: string; token?: string }>
 }) {
-  const { id } = await searchParams
+  const { id, token } = await searchParams
 
   if (!id) {
     redirect("/shop")
@@ -272,7 +296,7 @@ export default async function OrderConfirmationPage({
 
   return (
     <Suspense fallback={<OrderConfirmationFallback />}>
-      <OrderDetails orderId={id} />
+      <OrderDetails orderId={id} token={token} />
     </Suspense>
   )
 }

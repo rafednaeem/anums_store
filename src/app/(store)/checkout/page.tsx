@@ -156,6 +156,7 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [orderNumber, setOrderNumber] = useState<string | null>(null)
+  const [guestAccessToken, setGuestAccessToken] = useState<string | null>(null)
   const [savedAddresses, setSavedAddresses] = useState<Array<{ id: string; full_name: string; phone: string; address_line1: string; address_line2: string | null; city: string; province: string; postal_code: string | null }>>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [bankDetails, setBankDetails] = useState({
@@ -420,6 +421,7 @@ export default function CheckoutPage() {
 
       setOrderId(data.orderId)
       setOrderNumber(data.orderNumber)
+      setGuestAccessToken(data.guestAccessToken || null)
       clearCart()
       setStep(4)
       toast.success("Order placed successfully!")
@@ -524,6 +526,7 @@ export default function CheckoutPage() {
           <ConfirmationStep
             orderId={orderId!}
             orderNumber={orderNumber!}
+            guestAccessToken={guestAccessToken}
             onContinueShopping={() => router.push("/shop")}
           />
         )}
@@ -1040,12 +1043,18 @@ function ReviewStep({
 function ConfirmationStep({
   orderId,
   orderNumber,
+  guestAccessToken,
   onContinueShopping,
 }: {
   orderId: string
   orderNumber: string
+  guestAccessToken: string | null
   onContinueShopping: () => void
 }) {
+  const viewOrderUrl = guestAccessToken
+    ? `/order-confirmation?id=${orderId}&token=${guestAccessToken}`
+    : `/order-confirmation?id=${orderId}`
+
   return (
     <div className="flex flex-col items-center rounded-lg border border-ethereal-silver/30 bg-white py-16 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -1064,9 +1073,7 @@ function ConfirmationStep({
 
       <div className="mt-8 flex gap-4">
         <Button
-          onClick={() =>
-            (window.location.href = `/order-confirmation?id=${orderId}`)
-          }
+          onClick={() => (window.location.href = viewOrderUrl)}
           variant="outline"
         >
           View Order Details

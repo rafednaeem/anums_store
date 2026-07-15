@@ -296,10 +296,13 @@ export async function POST(req: Request) {
     const firstName = nameParts[0] || fullName
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : ""
 
+    const guestAccessToken = !user?.id ? crypto.randomUUID() : null
+
     const orderData = {
       order_number: orderNumber,
       user_id: user?.id || null,
       guest_email: body.shipping.guest_email || null,
+      guest_access_token: guestAccessToken,
       customer_name: firstName,
       customer_last_name: lastName,
       phone: body.shipping.phone,
@@ -578,6 +581,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       orderId: order.id,
       orderNumber: order.order_number,
+      guestAccessToken,
     })
   } catch (error: Any) {
     const duration = Date.now() - startTime

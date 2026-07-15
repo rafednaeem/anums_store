@@ -298,6 +298,7 @@ export interface Database {
           order_number: string
           user_id: string | null
           guest_email: string | null
+          guest_access_token: string | null
           customer_name: string
           customer_last_name: string
           phone: string
@@ -322,6 +323,7 @@ export interface Database {
           order_number: string
           user_id?: string | null
           guest_email?: string | null
+          guest_access_token?: string | null
           customer_name: string
           customer_last_name: string
           phone: string
@@ -346,6 +348,7 @@ export interface Database {
           order_number?: string
           user_id?: string | null
           guest_email?: string | null
+          guest_access_token?: string | null
           customer_name?: string
           customer_last_name?: string
           phone?: string
