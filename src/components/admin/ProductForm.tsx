@@ -59,6 +59,7 @@ export function ProductForm({ initialData, categories = [] }: ProductFormProps) 
       cover_url: initialData?.cover_url ?? null,
       is_active: initialData?.is_active ?? true,
       is_featured: initialData?.is_featured ?? false,
+      is_on_sale: initialData?.is_on_sale ?? false,
       sizes: initialData?.sizes ?? [],
       colors: initialData?.colors ?? [],
       gallery_urls: initialData?.gallery_urls ?? [],
@@ -272,17 +273,34 @@ export function ProductForm({ initialData, categories = [] }: ProductFormProps) 
                 <span className="text-sm font-medium">Active</span>
               </label>
             </div>
-            <div className="flex items-end">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-neutral-300"
-                  checked={watch("is_featured") ?? false}
-                  onChange={(e) => setValue("is_featured", e.target.checked)}
-                />
-                <span className="text-sm font-medium">Featured Product</span>
-              </label>
-            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Merchandising</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-neutral-300"
+                checked={watch("is_featured") ?? false}
+                onChange={(e) => setValue("is_featured", e.target.checked)}
+              />
+              <span className="text-sm font-medium">Featured Product</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-neutral-300"
+                checked={watch("is_on_sale") ?? false}
+                onChange={(e) => setValue("is_on_sale", e.target.checked)}
+              />
+              <span className="text-sm font-medium">On Sale</span>
+            </label>
           </div>
         </CardContent>
       </Card>

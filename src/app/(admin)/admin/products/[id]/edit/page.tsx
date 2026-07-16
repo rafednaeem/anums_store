@@ -82,6 +82,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           cover_url: productData.cover_url,
           is_active: productData.is_active,
           is_featured: productData.is_featured ?? false,
+          is_on_sale: productData.is_on_sale ?? false,
           sizes,
           colors,
           gallery_urls: imageRows.map((i) => i.image_url),
