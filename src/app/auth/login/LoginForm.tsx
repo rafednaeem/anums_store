@@ -5,10 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2 } from "lucide-react"
+import { Loader2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
@@ -32,6 +31,7 @@ export function LoginForm() {
   const redirect = searchParams.get("redirect") || "/account"
   const errorParam = searchParams.get("error")
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [sessionDenied, setSessionDenied] = useState(
     errorParam === "session_superseded" ? SESSION_DENIED_MSG : ""
   )
@@ -76,8 +76,6 @@ export function LoginForm() {
       }
 
       // ── Single-session enforcement (customers only) ──────────
-      // Check if this account already has an active session elsewhere.
-      // Must run BEFORE we set ownership / cookie so we can roll back cleanly.
       try {
         const { data: profile } = await supabase
           .from("profiles")
@@ -88,7 +86,6 @@ export function LoginForm() {
         const isCustomer = profile?.role !== "admin"
 
         if (isCustomer && profile?.active_session_token) {
-          // Another session exists — is it still alive?
           if (isStoredSessionActive(profile.active_session_at)) {
             await supabase.auth.signOut()
             setIsLoading(false)
@@ -97,7 +94,6 @@ export function LoginForm() {
           }
         }
 
-        // ── No blocking session — claim this one ──────────────
         const token = generateSessionToken()
 
         if (isCustomer) {
@@ -115,8 +111,6 @@ export function LoginForm() {
         // Profile query failed (transient DB issue) — allow login (fail-open)
       }
 
-      // Set storage values BEFORE updating AuthProvider state,
-      // so evaluateSession reads the correct ownership flag.
       setSessionOwner()
 
       if (data.remember_me) {
@@ -125,8 +119,6 @@ export function LoginForm() {
         clearRememberMe()
       }
 
-      // Update AuthProvider state — evaluateSession will see
-      // the ownership flag we just set and return "authenticated".
       setAuthenticated(user)
 
       const { data: profile } = await supabase
@@ -150,56 +142,85 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {sessionDenied && (
-        <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <div className="border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
           {sessionDenied}
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+      {/* Email Field */}
+      <div className="relative">
+        <Label
+          htmlFor="email"
+          className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+        >
+          Email Address
+        </Label>
         <Input
           id="email"
           type="email"
-          placeholder="you@example.com"
+          placeholder="email@example.com"
           autoComplete="email"
           disabled={isLoading}
+          className="editorial-input h-auto border-0 border-b border-border bg-transparent py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
           {...register("email")}
         />
         {errors.email && (
-          <p className="text-sm text-red-500">{errors.email.message}</p>
+          <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
         )}
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
+      {/* Password Field */}
+      <div className="relative">
+        <div className="mb-1 flex items-center justify-between">
+          <Label
+            htmlFor="password"
+            className="text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+          >
+            Password
+          </Label>
           <Link
             href="/auth/reset-password"
-            className="text-sm text-neutral-600 underline-offset-4 hover:underline dark:text-neutral-400"
+            className="text-[10px] font-semibold uppercase tracking-[0.1em] text-ethereal-maroon opacity-80 transition-opacity hover:opacity-100"
           >
-            Forgot password?
+            Forgot?
           </Link>
         </div>
-        <Input
-          id="password"
-          type="password"
-          placeholder="••••••••"
-          autoComplete="current-password"
-          disabled={isLoading}
-          {...register("password")}
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            disabled={isLoading}
+            className="editorial-input h-auto border-0 border-b border-border bg-transparent py-3 pr-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
+            {...register("password")}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-1 text-muted-foreground transition-colors hover:text-ethereal-dark"
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
         {errors.password && (
-          <p className="text-sm text-red-500">{errors.password.message}</p>
+          <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>
         )}
       </div>
 
+      {/* Remember Me */}
       <div className="flex items-center space-x-2">
         <input
           id="remember_me"
           type="checkbox"
-          className="h-4 w-4 rounded border-neutral-300 accent-neutral-900"
+          className="h-4 w-4 border-border accent-ethereal-dark"
           disabled={isLoading}
           {...register("remember_me")}
         />
@@ -208,26 +229,36 @@ export function LoginForm() {
         </Label>
       </div>
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Signing in...
-          </>
-        ) : (
-          "Sign In"
-        )}
-      </Button>
+      {/* Primary Action */}
+      <div className="pt-4">
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-ethereal-dark py-4 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-ethereal-dark/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Signing In...
+            </span>
+          ) : (
+            "Sign In"
+          )}
+        </button>
+      </div>
 
-      <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
-        Don&apos;t have an account?{" "}
+      {/* Secondary Action */}
+      <div className="border-t border-border/20 pt-6 text-center">
+        <p className="mb-4 text-sm text-muted-foreground">
+          New to Anums Store?
+        </p>
         <Link
           href="/auth/signup"
-          className="font-medium text-neutral-900 underline-offset-4 hover:underline dark:text-neutral-50"
+          className="inline-block w-full border border-ethereal-dark py-4 text-center text-sm font-medium uppercase tracking-widest text-ethereal-dark transition-all hover:bg-ethereal-dark hover:text-white"
         >
-          Sign up
+          Create an Account
         </Link>
-      </p>
+      </div>
     </form>
   )
 }

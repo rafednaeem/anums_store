@@ -37,3 +37,19 @@
     font-family: var(--font-cormorant), Georgia, serif;
   }
 }
+
+/* Editorial focus style for auth inputs */
+.editorial-input:focus {
+  outline: none;
+  border-bottom-width: 1.5px;
+  border-color: var(--foreground);
+}
+
+.editorial-input::placeholder {
+  color: #c4c2bc;
+}
+
+/* Micro-interaction: label color shift on input focus within auth forms */
+.auth-form-group:focus-within label {
+  color: var(--foreground);
+}

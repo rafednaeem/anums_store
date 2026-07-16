@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
@@ -53,17 +52,17 @@ export function ResetForm() {
 
   if (isSuccess) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center dark:border-green-800 dark:bg-green-950">
-        <h2 className="text-lg font-semibold text-green-800 dark:text-green-200">
+      <div className="border border-green-200 bg-green-50 p-6 text-center">
+        <h2 className="text-lg font-semibold text-green-800">
           Check Your Email
         </h2>
-        <p className="mt-2 text-sm text-green-700 dark:text-green-300">
+        <p className="mt-2 text-sm text-green-700">
           We&apos;ve sent a password reset link to your email address. Please
           click the link to reset your password.
         </p>
         <Link
           href="/auth/login"
-          className="mt-4 inline-block text-sm font-medium text-green-800 underline-offset-4 hover:underline dark:text-green-200"
+          className="mt-4 inline-block text-sm font-medium text-green-800 underline-offset-4 hover:underline"
         >
           Back to Sign In
         </Link>
@@ -72,42 +71,59 @@ export function ResetForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      {/* Email Field */}
+      <div className="relative">
+        <Label
+          htmlFor="email"
+          className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+        >
+          Email Address
+        </Label>
         <Input
           id="email"
           type="email"
-          placeholder="you@example.com"
+          placeholder="email@example.com"
           autoComplete="email"
           disabled={isLoading}
+          className="editorial-input h-auto border-0 border-b border-border bg-transparent py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
           {...register("email")}
         />
         {errors.email && (
-          <p className="text-sm text-red-500">{errors.email.message}</p>
+          <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
         )}
       </div>
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Sending reset link...
-          </>
-        ) : (
-          "Send Reset Link"
-        )}
-      </Button>
+      {/* Primary Action */}
+      <div className="pt-4">
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-ethereal-dark py-4 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-ethereal-dark/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Sending Reset Link...
+            </span>
+          ) : (
+            "Send Reset Link"
+          )}
+        </button>
+      </div>
 
-      <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
-        Remember your password?{" "}
+      {/* Secondary Action */}
+      <div className="border-t border-border/20 pt-6 text-center">
+        <p className="mb-4 text-sm text-muted-foreground">
+          Remember your password?
+        </p>
         <Link
           href="/auth/login"
-          className="font-medium text-neutral-900 underline-offset-4 hover:underline dark:text-neutral-50"
+          className="inline-block w-full border border-ethereal-dark py-4 text-center text-sm font-medium uppercase tracking-widest text-ethereal-dark transition-all hover:bg-ethereal-dark hover:text-white"
         >
-          Sign in
+          Back to Sign In
         </Link>
-      </p>
+      </div>
     </form>
   )
 }
