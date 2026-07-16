@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
+import { useWishlist } from "@/hooks/useWishlist"
 
 interface ProductCardProps {
   product: {
@@ -27,9 +28,9 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const router = useRouter()
-  const [isWishlisted, setIsWishlisted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
+  const { isWishlisted, addItem, removeItem } = useWishlist()
 
   const displayPrice =
     product.is_on_sale && product.sale_price ? product.sale_price : product.price
@@ -53,29 +54,12 @@ export default function ProductCard({ product }: ProductCardProps) {
 
     setIsLoading(true)
     try {
-      if (isWishlisted) {
-        await supabase
-          .from("wishlists")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("product_id", product.id)
-        setIsWishlisted(false)
+      if (isWishlisted(product.id)) {
+        await removeItem(product.id)
         toast.success("Removed from wishlist")
       } else {
-        const { error } = await supabase
-          .from("wishlists")
-          .insert({ user_id: user.id, product_id: product.id })
-        if (error) {
-          if (error.code === "23505") {
-            setIsWishlisted(true)
-            toast.info("Already in wishlist")
-          } else {
-            throw error
-          }
-        } else {
-          setIsWishlisted(true)
-          toast.success("Added to wishlist")
-        }
+        await addItem(product.id)
+        toast.success("Added to wishlist")
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed"
@@ -127,9 +111,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             disabled={isLoading}
             className={cn(
               "absolute bottom-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm transition-colors hover:bg-white disabled:opacity-50",
-              isWishlisted && "bg-ethereal-maroon/10"
+              isWishlisted(product.id) && "bg-ethereal-maroon/10"
             )}
-            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -137,7 +121,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               <Heart
                 className={cn(
                   "h-4 w-4 transition-colors",
-                  isWishlisted
+                  isWishlisted(product.id)
                     ? "fill-ethereal-maroon text-ethereal-maroon"
                     : "text-muted-foreground"
                 )}

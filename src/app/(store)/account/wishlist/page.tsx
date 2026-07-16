@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic"
 import { createClient } from "@/lib/supabase/client"
 import AuthGuard from "@/components/shared/AuthGuard"
 import ProductCard from "@/components/store/ProductCard"
+import { useWishlist } from "@/hooks/useWishlist"
 
 interface WishlistProduct {
   id: string
@@ -41,6 +42,7 @@ function WishlistContent() {
   const supabase = createClient()
   const [items, setItems] = useState<WishlistItem[]>([])
   const [loading, setLoading] = useState(true)
+  const { removeItem } = useWishlist()
 
   useEffect(() => {
     fetchWishlist()
@@ -92,8 +94,8 @@ function WishlistContent() {
     setLoading(false)
   }
 
-  async function handleRemove(wishlistId: string) {
-    await supabase.from("wishlists").delete().eq("id", wishlistId)
+  async function handleRemove(wishlistId: string, productId: string) {
+    await removeItem(productId)
     setItems((prev) => prev.filter((item) => item.id !== wishlistId))
   }
 
@@ -137,7 +139,7 @@ function WishlistContent() {
             <div key={item.id} className="relative">
               <ProductCard product={item.product} />
               <button
-                onClick={() => handleRemove(item.id)}
+                onClick={() => handleRemove(item.id, item.product_id)}
                 className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-muted-foreground shadow-sm transition-colors hover:bg-red-50 hover:text-red-600"
                 aria-label="Remove from wishlist"
               >

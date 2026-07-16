@@ -5,6 +5,8 @@ import Link from "next/link"
 import { Menu, X, User, Heart, ShoppingBag } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { storeName } from "@/lib/constants"
+import { useCart } from "@/hooks/useCart"
+import { useWishlist } from "@/hooks/useWishlist"
 import CartDrawer from "./CartDrawer"
 
 const navLinks = [
@@ -16,6 +18,8 @@ const navLinks = [
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const { totalItems } = useCart()
+  const { count: wishlistCount } = useWishlist()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -86,12 +90,17 @@ export default function Header() {
           </Link>
           <Link
             href="/account/wishlist"
-            className="hidden rounded-md p-2 text-ethereal-dark transition-colors hover:bg-ethereal-cream sm:inline-flex"
+            className="relative hidden rounded-md p-2 text-ethereal-dark transition-colors hover:bg-ethereal-cream sm:inline-flex"
             aria-label="Wishlist"
           >
             <Heart className="h-5 w-5" aria-hidden="true" />
+            {wishlistCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-ethereal-maroon text-[10px] font-bold text-white">
+                {wishlistCount > 99 ? "99+" : wishlistCount}
+              </span>
+            )}
           </Link>
-          <CartDrawer />
+          <CartDrawer itemCount={totalItems} />
         </div>
       </div>
 
@@ -155,7 +164,14 @@ export default function Header() {
                     className="flex items-center gap-3 rounded-md px-3 py-2 text-base font-medium text-ethereal-dark transition-colors hover:bg-ethereal-cream"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <Heart className="h-5 w-5" aria-hidden="true" />
+                    <span className="relative">
+                      <Heart className="h-5 w-5" aria-hidden="true" />
+                      {wishlistCount > 0 && (
+                        <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-ethereal-maroon text-[10px] font-bold text-white">
+                          {wishlistCount > 99 ? "99+" : wishlistCount}
+                        </span>
+                      )}
+                    </span>
                     Wishlist
                   </Link>
                 </li>

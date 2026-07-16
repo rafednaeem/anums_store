@@ -3,6 +3,7 @@ import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { CartProvider } from "@/hooks/useCart";
+import { WishlistProvider } from "@/hooks/useWishlist";
 import AuthProvider from "@/components/shared/SessionRestoreProvider";
 import { storeName } from "@/lib/constants";
 
@@ -66,7 +67,9 @@ export default function RootLayout({
       <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased`}>
         <CartProvider>
           <AuthProvider>
-            {children}
+            <WishlistProvider>
+              {children}
+            </WishlistProvider>
           </AuthProvider>
           <Toaster richColors position="top-right" />
         </CartProvider>
