@@ -53,3 +53,29 @@
 .auth-form-group:focus-within label {
   color: var(--foreground);
 }
+
+/* Auth card fade-in animation */
+.auth-card {
+  animation: authFadeIn 0.8s ease-out forwards;
+}
+
+@keyframes authFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Placeholder fade on focus for editorial inputs */
+.editorial-input:focus::placeholder {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.editorial-input::placeholder {
+  transition: opacity 0.3s ease;
+}

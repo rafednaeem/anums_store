@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Eye, EyeOff } from "lucide-react"
+import { Loader2, Eye, EyeOff, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,7 @@ export function SignupForm() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
 
   const {
     register,
@@ -34,6 +35,11 @@ export function SignupForm() {
   })
 
   async function onSubmit(data: SignupInput) {
+    if (!agreedToTerms) {
+      toast.error("Please agree to the Terms of Service and Privacy Policy.")
+      return
+    }
+
     setIsLoading(true)
     const supabase = createClient()
 
@@ -89,17 +95,17 @@ export function SignupForm() {
       <div className="relative">
         <Label
           htmlFor="full_name"
-          className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+          className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
         >
           Full Name
         </Label>
         <Input
           id="full_name"
           type="text"
-          placeholder="John Doe"
+          placeholder="e.g. Amna Ali"
           autoComplete="name"
           disabled={isLoading}
-          className="editorial-input h-auto border-0 border-b border-border bg-transparent py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
+          className="editorial-input h-auto border-0 border-b border-border bg-transparent px-0 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
           {...register("full_name")}
         />
         {errors.full_name && (
@@ -111,17 +117,17 @@ export function SignupForm() {
       <div className="relative">
         <Label
           htmlFor="email"
-          className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+          className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
         >
           Email Address
         </Label>
         <Input
           id="email"
           type="email"
-          placeholder="email@example.com"
+          placeholder="hello@example.com"
           autoComplete="email"
           disabled={isLoading}
-          className="editorial-input h-auto border-0 border-b border-border bg-transparent py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
+          className="editorial-input h-auto border-0 border-b border-border bg-transparent px-0 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
           {...register("email")}
         />
         {errors.email && (
@@ -133,7 +139,7 @@ export function SignupForm() {
       <div className="relative">
         <Label
           htmlFor="phone"
-          className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+          className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
         >
           Phone (Optional)
         </Label>
@@ -143,7 +149,7 @@ export function SignupForm() {
           placeholder="03212345678"
           autoComplete="tel"
           disabled={isLoading}
-          className="editorial-input h-auto border-0 border-b border-border bg-transparent py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
+          className="editorial-input h-auto border-0 border-b border-border bg-transparent px-0 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
           {...register("phone")}
         />
         {errors.phone && (
@@ -155,7 +161,7 @@ export function SignupForm() {
       <div className="relative">
         <Label
           htmlFor="password"
-          className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+          className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
         >
           Password
         </Label>
@@ -166,7 +172,7 @@ export function SignupForm() {
             placeholder="••••••••"
             autoComplete="new-password"
             disabled={isLoading}
-            className="editorial-input h-auto border-0 border-b border-border bg-transparent py-3 pr-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
+            className="editorial-input h-auto border-0 border-b border-border bg-transparent px-0 py-3 pr-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
             {...register("password")}
           />
           <button
@@ -191,7 +197,7 @@ export function SignupForm() {
       <div className="relative">
         <Label
           htmlFor="confirm_password"
-          className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+          className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
         >
           Confirm Password
         </Label>
@@ -202,7 +208,7 @@ export function SignupForm() {
             placeholder="••••••••"
             autoComplete="new-password"
             disabled={isLoading}
-            className="editorial-input h-auto border-0 border-b border-border bg-transparent py-3 pr-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
+            className="editorial-input h-auto border-0 border-b border-border bg-transparent px-0 py-3 pr-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ethereal-dark"
             {...register("confirm_password")}
           />
           <button
@@ -225,35 +231,67 @@ export function SignupForm() {
         )}
       </div>
 
+      {/* Terms Checkbox */}
+      <div className="flex items-start gap-3">
+        <input
+          id="terms"
+          type="checkbox"
+          checked={agreedToTerms}
+          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          className="mt-0.5 h-4 w-4 border-border accent-ethereal-dark"
+          disabled={isLoading}
+        />
+        <label htmlFor="terms" className="text-[13px] text-muted-foreground">
+          I agree to the{" "}
+          <Link
+            href="/terms"
+            className="underline transition-colors hover:text-ethereal-dark"
+          >
+            Terms of Service
+          </Link>{" "}
+          &amp;{" "}
+          <Link
+            href="/privacy-policy"
+            className="underline transition-colors hover:text-ethereal-dark"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </label>
+      </div>
+
       {/* Primary Action */}
       <div className="pt-4">
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-ethereal-dark py-4 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-ethereal-dark/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="group flex w-full items-center justify-center gap-2 bg-ethereal-dark py-4 px-8 text-sm font-medium uppercase tracking-widest text-white transition-all duration-300 hover:bg-ethereal-dark/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
-            <span className="inline-flex items-center gap-2">
+            <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Creating Account...
-            </span>
+              <span>Processing...</span>
+            </>
           ) : (
-            "Create Account"
+            <>
+              <span>Register</span>
+              <ArrowRight className="h-[18px] w-[18px] transition-transform group-hover:translate-x-1" />
+            </>
           )}
         </button>
       </div>
 
-      {/* Secondary Action */}
-      <div className="border-t border-border/20 pt-6 text-center">
-        <p className="mb-4 text-sm text-muted-foreground">
-          Already have an account?
+      {/* Redirect to Sign In */}
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link
+            href="/auth/login"
+            className="font-semibold text-ethereal-dark underline-offset-4 hover:underline"
+          >
+            Sign In
+          </Link>
         </p>
-        <Link
-          href="/auth/login"
-          className="inline-block w-full border border-ethereal-dark py-4 text-center text-sm font-medium uppercase tracking-widest text-ethereal-dark transition-all hover:bg-ethereal-dark hover:text-white"
-        >
-          Sign In
-        </Link>
       </div>
     </form>
   )

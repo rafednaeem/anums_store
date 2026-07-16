@@ -2,9 +2,9 @@ import Link from "next/link"
 import { storeName } from "@/lib/constants"
 
 const footerLinks = [
-  { href: "/privacy-policy", label: "Privacy Policy" },
-  { href: "/shipping-returns", label: "Shipping & Returns" },
-  { href: "/contact", label: "Contact Us" },
+  { href: "/help", label: "Help" },
+  { href: "/store-locator", label: "Store Locator" },
+  { href: "/shipping-returns", label: "Shipping" },
 ]
 
 export default function AuthLayout({
@@ -16,61 +16,38 @@ export default function AuthLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-[#faf9f4]">
-      {/* Navbar */}
-      <nav className="fixed top-0 z-50 flex h-20 w-full items-center justify-between border-b border-border/30 bg-[#faf9f4]/80 px-5 backdrop-blur-md md:px-16">
+      {/* Navbar — centered brand only */}
+      <header className="fixed top-0 z-50 flex h-20 w-full items-center justify-center bg-[#faf9f4]/80 px-5 backdrop-blur-md">
         <Link
           href="/"
           className="font-heading text-xl font-semibold uppercase tracking-widest text-ethereal-dark sm:text-2xl"
         >
           {storeName}
         </Link>
-        <div className="hidden gap-8 md:flex">
-          <Link
-            href="/shop"
-            className="text-sm text-muted-foreground transition-opacity hover:opacity-70"
-          >
-            Shop
-          </Link>
-          <Link
-            href="/bridal"
-            className="text-sm text-muted-foreground transition-opacity hover:opacity-70"
-          >
-            Bridal
-          </Link>
-          <Link
-            href="/our-story"
-            className="text-sm text-muted-foreground transition-opacity hover:opacity-70"
-          >
-            Our Story
-          </Link>
-        </div>
-
-      </nav>
+      </header>
 
       {/* Main Content */}
-      <main className="flex flex-1 items-center justify-center px-5 pt-24 pb-12 md:px-0">
-        <div className="w-full max-w-[440px] border border-primary/10 bg-white p-10 md:p-12">
-          {children}
-        </div>
+      <main className="flex flex-1 items-center justify-center pt-20 px-5">
+        {children}
       </main>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-border/30 bg-[#faf9f4] py-12 px-5 md:px-16">
-        <div className="flex flex-col items-center gap-8">
-          <nav className="flex flex-wrap justify-center gap-8">
+      {/* Footer — minimal */}
+      <footer className="mt-auto py-12 px-5">
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60">
+            &copy; {year} {storeName}. All Rights Reserved.
+          </p>
+          <div className="flex gap-6">
             {footerLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm text-muted-foreground transition-colors hover:text-ethereal-maroon"
+                className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-ethereal-dark"
               >
                 {link.label}
               </Link>
             ))}
-          </nav>
-          <p className="text-sm text-muted-foreground">
-            &copy; {year} {storeName}. All Rights Reserved.
-          </p>
+          </div>
         </div>
       </footer>
     </div>

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ResetPasswordPage() {
   return (
-    <>
+    <div className="auth-card w-full max-w-[440px] border border-border/30 bg-white p-10 md:p-12">
       {/* Auth Header */}
       <header className="mb-10 text-center">
         <h1 className="font-heading text-3xl text-ethereal-dark mb-2">
@@ -19,6 +19,6 @@ export default function ResetPasswordPage() {
         </p>
       </header>
       <ResetForm />
-    </>
+    </div>
   )
 }
