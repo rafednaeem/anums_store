@@ -85,7 +85,7 @@ export default function Header() {
             <User className="h-5 w-5" aria-hidden="true" />
           </Link>
           <Link
-            href="/wishlist"
+            href="/account/wishlist"
             className="hidden rounded-md p-2 text-ethereal-dark transition-colors hover:bg-ethereal-cream sm:inline-flex"
             aria-label="Wishlist"
           >
@@ -151,7 +151,7 @@ export default function Header() {
                 </li>
                 <li>
                   <Link
-                    href="/wishlist"
+                    href="/account/wishlist"
                     className="flex items-center gap-3 rounded-md px-3 py-2 text-base font-medium text-ethereal-dark transition-colors hover:bg-ethereal-cream"
                     onClick={() => setMobileMenuOpen(false)}
                   >
