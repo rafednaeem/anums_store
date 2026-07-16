@@ -84,7 +84,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       status: newPaymentStatus,
       verified_by: user.id,
       verified_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
       rejection_reason: action === 'reject' ? rejection_reason.trim() : null,
     })
     .eq('order_id', id)

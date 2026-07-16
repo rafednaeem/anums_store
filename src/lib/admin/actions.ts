@@ -93,7 +93,6 @@ export async function verifyPayment(orderId: string): Promise<ActionResult> {
         status: "verified",
         verified_by: admin.id ?? null,
         verified_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       })
       .eq("id", (payment as { id: string }).id)
 
@@ -146,7 +145,6 @@ export async function rejectPayment(orderId: string, reason: string): Promise<Ac
         rejection_reason: reason,
         verified_by: admin.id ?? null,
         verified_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       })
       .eq("id", (payment as { id: string }).id)
 
