@@ -72,25 +72,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   const pendingPayment = paymentList.find((p) => p.status === "submitted")
 
-  const debugInfo = {
-    orderId: orderData.id,
-    paymentStatus: orderData.payment_status,
-    paymentsCount: paymentList.length,
-    payments: paymentList.map((p) => ({
-      id: p.id,
-      status: p.status,
-      amount: p.amount,
-      method: p.method,
-      proof_url: p.proof_url ? p.proof_url.substring(0, 80) + "..." : null,
-      proof_filename: p.proof_filename,
-    })),
-    itemsCount: items.length,
-    rawOrderItemsCount: orderData.order_items?.length ?? 0,
-    rawPaymentsCount: orderData.payments?.length ?? 0,
-    rawTimelineCount: orderData.order_timeline?.length ?? 0,
-    jsonbItemsCount: Array.isArray(orderData.items) ? orderData.items.length : 0,
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -377,19 +358,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           )}
         </div>
       </div>
-
-      <Card className="border-dashed border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30">
-        <CardHeader>
-          <CardTitle className="text-sm text-yellow-800 dark:text-yellow-200">
-            Debug Info (temporary)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <pre className="overflow-x-auto whitespace-pre-wrap text-xs text-yellow-900 dark:text-yellow-100">
-            {JSON.stringify(debugInfo, null, 2)}
-          </pre>
-        </CardContent>
-      </Card>
     </div>
   )
 }
