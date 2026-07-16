@@ -45,125 +45,131 @@ async function generateUniqueSlug(supabase: Any, baseSlug: string, excludeId?: s
 }
 
 export async function updateOrderStatus(orderId: string, status: string) {
-  await requireAdminThrow()
-  const supabase = createServiceRoleClient() as Any
+  try {
+    const admin = await requireAdminThrow()
+    const supabase = createServiceRoleClient() as Any
 
-  const { error } = await supabase
-    .from("orders")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", orderId)
+    const { error } = await supabase
+      .from("orders")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", orderId)
 
-  if (error) throw new Error(error.message)
+    if (error) throw new Error(error.message)
 
-  const { data: userData } = await supabase.auth.getUser()
-  const user = userData?.user
+    await supabase.from("order_timeline").insert({
+      order_id: orderId,
+      status,
+      note: `Status changed to ${status}`,
+      created_by: admin.id ?? null,
+    })
 
-  await supabase.from("order_timeline").insert({
-    order_id: orderId,
-    status,
-    note: `Status changed to ${status}`,
-    created_by: user?.id ?? null,
-  })
-
-  revalidatePath("/admin/orders")
-  revalidatePath(`/admin/orders/${orderId}`)
+    revalidatePath("/admin/orders")
+    revalidatePath(`/admin/orders/${orderId}`)
+  } catch (err) {
+    console.error("[updateOrderStatus] Error:", err)
+    throw err
+  }
 }
 
 export async function verifyPayment(orderId: string) {
-  await requireAdminThrow()
-  const supabase = createServiceRoleClient() as Any
+  try {
+    const admin = await requireAdminThrow()
+    const supabase = createServiceRoleClient() as Any
 
-  const { data: payment, error: payErr } = await supabase
-    .from("payments")
-    .select("id")
-    .eq("order_id", orderId)
-    .eq("status", "submitted")
-    .single()
+    const { data: payment, error: payErr } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("order_id", orderId)
+      .eq("status", "submitted")
+      .single()
 
-  if (payErr || !payment) throw new Error("No pending payment found")
+    if (payErr || !payment) throw new Error("No pending payment found")
 
-  const { data: userData } = await supabase.auth.getUser()
-  const user = userData?.user
+    const { error } = await supabase
+      .from("payments")
+      .update({
+        status: "verified",
+        verified_by: admin.id ?? null,
+        verified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", (payment as { id: string }).id)
 
-  const { error } = await supabase
-    .from("payments")
-    .update({
-      status: "verified",
-      verified_by: user?.id ?? null,
-      verified_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", (payment as { id: string }).id)
+    if (error) throw new Error(error.message)
 
-  if (error) throw new Error(error.message)
+    await supabase
+      .from("orders")
+      .update({
+        payment_status: "verified",
+        status: "payment_verified",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId)
 
-  await supabase
-    .from("orders")
-    .update({
-      payment_status: "verified",
+    await supabase.from("order_timeline").insert({
+      order_id: orderId,
       status: "payment_verified",
-      updated_at: new Date().toISOString(),
+      note: "Payment verified by admin",
+      created_by: admin.id ?? null,
     })
-    .eq("id", orderId)
 
-  await supabase.from("order_timeline").insert({
-    order_id: orderId,
-    status: "payment_verified",
-    note: "Payment verified by admin",
-    created_by: user?.id ?? null,
-  })
-
-  revalidatePath("/admin/orders")
-  revalidatePath(`/admin/orders/${orderId}`)
+    revalidatePath("/admin/orders")
+    revalidatePath(`/admin/orders/${orderId}`)
+  } catch (err) {
+    console.error("[verifyPayment] Error:", err)
+    throw err
+  }
 }
 
 export async function rejectPayment(orderId: string, reason: string) {
-  await requireAdminThrow()
-  const supabase = createServiceRoleClient() as Any
+  try {
+    const admin = await requireAdminThrow()
+    const supabase = createServiceRoleClient() as Any
 
-  const { data: payment, error: payErr } = await supabase
-    .from("payments")
-    .select("id")
-    .eq("order_id", orderId)
-    .eq("status", "submitted")
-    .single()
+    const { data: payment, error: payErr } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("order_id", orderId)
+      .eq("status", "submitted")
+      .single()
 
-  if (payErr || !payment) throw new Error("No pending payment found")
+    if (payErr || !payment) throw new Error("No pending payment found")
 
-  const { data: userData } = await supabase.auth.getUser()
-  const user = userData?.user
+    const { error } = await supabase
+      .from("payments")
+      .update({
+        status: "rejected",
+        rejection_reason: reason,
+        verified_by: admin.id ?? null,
+        verified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", (payment as { id: string }).id)
 
-  const { error } = await supabase
-    .from("payments")
-    .update({
-      status: "rejected",
-      rejection_reason: reason,
-      verified_by: user?.id ?? null,
-      verified_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", (payment as { id: string }).id)
+    if (error) throw new Error(error.message)
 
-  if (error) throw new Error(error.message)
+    await supabase
+      .from("orders")
+      .update({
+        payment_status: "rejected",
+        status: "payment_rejected",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId)
 
-  await supabase
-    .from("orders")
-    .update({
-      payment_status: "rejected",
+    await supabase.from("order_timeline").insert({
+      order_id: orderId,
       status: "payment_rejected",
-      updated_at: new Date().toISOString(),
+      note: reason,
+      created_by: admin.id ?? null,
     })
-    .eq("id", orderId)
 
-  await supabase.from("order_timeline").insert({
-    order_id: orderId,
-    status: "payment_rejected",
-    note: reason,
-    created_by: user?.id ?? null,
-  })
-
-  revalidatePath("/admin/orders")
-  revalidatePath(`/admin/orders/${orderId}`)
+    revalidatePath("/admin/orders")
+    revalidatePath(`/admin/orders/${orderId}`)
+  } catch (err) {
+    console.error("[rejectPayment] Error:", err)
+    throw err
+  }
 }
 
 export async function createProduct(data: ProductInput) {

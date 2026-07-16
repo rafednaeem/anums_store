@@ -66,7 +66,9 @@ export function OrderActions({
         toast.success("Payment verified")
         router.refresh()
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to verify")
+        const msg = err instanceof Error ? err.message : "Failed to verify payment"
+        console.error("[OrderActions] verifyPayment error:", err)
+        toast.error(msg)
       }
     })
   }
@@ -84,7 +86,9 @@ export function OrderActions({
         setRejectReason("")
         router.refresh()
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to reject")
+        const msg = err instanceof Error ? err.message : "Failed to reject payment"
+        console.error("[OrderActions] rejectPayment error:", err)
+        toast.error(msg)
       }
     })
   }
