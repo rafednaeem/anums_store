@@ -44,7 +44,7 @@ async function generateUniqueSlug(supabase: Any, baseSlug: string, excludeId?: s
   return slug
 }
 
-export async function updateOrderStatus(orderId: string, status: string) {
+export async function updateOrderStatus(orderId: string, status: string): Promise<ActionResult> {
   try {
     const admin = await requireAdminThrow()
     const supabase = createServiceRoleClient() as Any
@@ -54,7 +54,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
       .update({ status, updated_at: new Date().toISOString() })
       .eq("id", orderId)
 
-    if (error) throw new Error(error.message)
+    if (error) return { ok: false, error: `Failed to update order: ${error.message}` }
 
     await supabase.from("order_timeline").insert({
       order_id: orderId,
@@ -65,13 +65,15 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
     revalidatePath("/admin/orders")
     revalidatePath(`/admin/orders/${orderId}`)
+    return { ok: true }
   } catch (err) {
-    console.error("[updateOrderStatus] Error:", err)
-    throw err
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[updateOrderStatus] Error:", msg)
+    return { ok: false, error: msg }
   }
 }
 
-export async function verifyPayment(orderId: string) {
+export async function verifyPayment(orderId: string): Promise<ActionResult> {
   try {
     const admin = await requireAdminThrow()
     const supabase = createServiceRoleClient() as Any
@@ -83,7 +85,7 @@ export async function verifyPayment(orderId: string) {
       .eq("status", "submitted")
       .single()
 
-    if (payErr || !payment) throw new Error("No pending payment found")
+    if (payErr || !payment) return { ok: false, error: `No pending payment found: ${payErr?.message ?? "unknown"}` }
 
     const { error } = await supabase
       .from("payments")
@@ -95,7 +97,7 @@ export async function verifyPayment(orderId: string) {
       })
       .eq("id", (payment as { id: string }).id)
 
-    if (error) throw new Error(error.message)
+    if (error) return { ok: false, error: `Failed to update payment: ${error.message}` }
 
     await supabase
       .from("orders")
@@ -115,13 +117,15 @@ export async function verifyPayment(orderId: string) {
 
     revalidatePath("/admin/orders")
     revalidatePath(`/admin/orders/${orderId}`)
+    return { ok: true }
   } catch (err) {
-    console.error("[verifyPayment] Error:", err)
-    throw err
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[verifyPayment] Error:", msg)
+    return { ok: false, error: msg }
   }
 }
 
-export async function rejectPayment(orderId: string, reason: string) {
+export async function rejectPayment(orderId: string, reason: string): Promise<ActionResult> {
   try {
     const admin = await requireAdminThrow()
     const supabase = createServiceRoleClient() as Any
@@ -133,7 +137,7 @@ export async function rejectPayment(orderId: string, reason: string) {
       .eq("status", "submitted")
       .single()
 
-    if (payErr || !payment) throw new Error("No pending payment found")
+    if (payErr || !payment) return { ok: false, error: `No pending payment found: ${payErr?.message ?? "unknown"}` }
 
     const { error } = await supabase
       .from("payments")
@@ -146,7 +150,7 @@ export async function rejectPayment(orderId: string, reason: string) {
       })
       .eq("id", (payment as { id: string }).id)
 
-    if (error) throw new Error(error.message)
+    if (error) return { ok: false, error: `Failed to update payment: ${error.message}` }
 
     await supabase
       .from("orders")
@@ -166,9 +170,11 @@ export async function rejectPayment(orderId: string, reason: string) {
 
     revalidatePath("/admin/orders")
     revalidatePath(`/admin/orders/${orderId}`)
+    return { ok: true }
   } catch (err) {
-    console.error("[rejectPayment] Error:", err)
-    throw err
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[rejectPayment] Error:", msg)
+    return { ok: false, error: msg }
   }
 }
 

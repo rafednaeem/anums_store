@@ -42,33 +42,36 @@ export function OrderActions({
   const [selectedStatus, setSelectedStatus] = useState(currentStatus)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const allowedTransitions =
     ORDER_STATUS_TRANSITIONS[currentStatus as OrderStatus] ?? []
 
   function handleStatusUpdate() {
     if (selectedStatus === currentStatus) return
+    setActionError(null)
     startTransition(async () => {
-      try {
-        await updateOrderStatus(orderId, selectedStatus)
+      const result = await updateOrderStatus(orderId, selectedStatus)
+      if (result.ok) {
         toast.success("Order status updated")
         router.refresh()
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to update")
+      } else {
+        setActionError(result.error)
+        toast.error(result.error)
       }
     })
   }
 
   function handleVerifyPayment() {
+    setActionError(null)
     startTransition(async () => {
-      try {
-        await verifyPayment(orderId)
+      const result = await verifyPayment(orderId)
+      if (result.ok) {
         toast.success("Payment verified")
         router.refresh()
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to verify payment"
-        console.error("[OrderActions] verifyPayment error:", err)
-        toast.error(msg)
+      } else {
+        setActionError(result.error)
+        toast.error(result.error)
       }
     })
   }
@@ -78,17 +81,17 @@ export function OrderActions({
       toast.error("Please enter a reason")
       return
     }
+    setActionError(null)
     startTransition(async () => {
-      try {
-        await rejectPayment(orderId, rejectReason.trim())
+      const result = await rejectPayment(orderId, rejectReason.trim())
+      if (result.ok) {
         toast.success("Payment rejected")
         setRejectOpen(false)
         setRejectReason("")
         router.refresh()
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to reject payment"
-        console.error("[OrderActions] rejectPayment error:", err)
-        toast.error(msg)
+      } else {
+        setActionError(result.error)
+        toast.error(result.error)
       }
     })
   }
@@ -100,6 +103,13 @@ export function OrderActions({
           <CardTitle>Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {actionError && (
+            <div className="rounded-md bg-red-50 border border-red-200 p-3 dark:bg-red-950/30 dark:border-red-800">
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">Error:</p>
+              <p className="mt-1 text-xs text-red-700 dark:text-red-300 break-all">{actionError}</p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Update Status</label>
             <div className="flex gap-2">
