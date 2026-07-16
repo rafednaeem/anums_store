@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { User, ShoppingBag } from "lucide-react"
 import { storeName } from "@/lib/constants"
 
 const footerLinks = [
@@ -45,22 +44,7 @@ export default function AuthLayout({
             Our Story
           </Link>
         </div>
-        <div className="flex gap-4">
-          <Link
-            href="/account"
-            className="text-ethereal-dark transition-opacity hover:opacity-70"
-            aria-label="Account"
-          >
-            <User className="h-5 w-5" />
-          </Link>
-          <Link
-            href="/cart"
-            className="text-ethereal-dark transition-opacity hover:opacity-70"
-            aria-label="Cart"
-          >
-            <ShoppingBag className="h-5 w-5" />
-          </Link>
-        </div>
+
       </nav>
 
       {/* Main Content */}

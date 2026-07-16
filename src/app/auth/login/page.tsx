@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import { Suspense } from "react"
+import { ArrowLeft } from "lucide-react"
 import { LoginForm } from "./LoginForm"
 
 export const metadata: Metadata = {
@@ -22,6 +24,15 @@ export default function LoginPage() {
       <Suspense fallback={null}>
         <LoginForm />
       </Suspense>
+      <div className="mt-8 text-center">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-ethereal-dark"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+      </div>
     </>
   )
 }
