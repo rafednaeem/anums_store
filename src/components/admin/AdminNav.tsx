@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -17,8 +17,7 @@ import {
   X,
 } from "lucide-react"
 import { useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { clearAllSessionData } from "@/lib/session"
+import { useAuth } from "@/components/shared/SessionRestoreProvider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -36,22 +35,12 @@ const navItems = [
 
 export function AdminNav() {
   const pathname = usePathname()
-  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { signOut } = useAuth()
 
   async function handleLogout() {
-    const supabase = createClient()
-    const { error } = await supabase.auth.signOut()
-
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-
-    clearAllSessionData()
-
+    await signOut()
     toast.success("Logged out successfully")
-    router.push("/auth/login")
   }
 
   function isActive(href: string) {

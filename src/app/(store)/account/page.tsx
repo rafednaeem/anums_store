@@ -2,10 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Package, MapPin, Heart, LogOut, User } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { clearAllSessionData, clearSessionTokenCookie } from "@/lib/session"
+import { useAuth } from "@/components/shared/SessionRestoreProvider"
 import AuthGuard from "@/components/shared/AuthGuard"
 import { Button } from "@/components/ui/button"
 
@@ -28,10 +27,10 @@ export default function AccountPage() {
 }
 
 function AccountContent() {
-  const router = useRouter()
   const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [signingOut, setSigningOut] = useState(false)
+  const { signOut } = useAuth()
 
   useEffect(() => {
     async function loadProfile() {
@@ -59,29 +58,7 @@ function AccountContent() {
 
   async function handleSignOut() {
     setSigningOut(true)
-
-    // Clear single-session record from DB
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (user) {
-      try {
-        await supabase
-          .from("profiles")
-          .update({
-            active_session_token: null,
-            active_session_at: null,
-          })
-          .eq("id", user.id)
-      } catch {
-        // Best-effort
-      }
-    }
-
-    clearSessionTokenCookie()
-    clearAllSessionData()
-    await supabase.auth.signOut()
-    router.push("/")
+    await signOut()
   }
 
   return (
