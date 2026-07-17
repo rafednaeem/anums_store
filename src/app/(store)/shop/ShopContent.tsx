@@ -188,45 +188,6 @@ export default function ShopContent({
               </ul>
             </div>
 
-            {/* Size Filter (decorative — functional sizes come from product variants) */}
-            <div className="space-y-6">
-              <h3 className="text-[12px] font-semibold uppercase tracking-[0.1em] border-b border-border/30 pb-4">
-                Size
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
-                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                  <button
-                    key={size}
-                    className="border border-border py-2 text-[12px] font-semibold uppercase tracking-[0.1em] hover:bg-ethereal-dark hover:text-white transition-colors"
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Color Palette (decorative) */}
-            <div className="space-y-6">
-              <h3 className="text-[12px] font-semibold uppercase tracking-[0.1em] border-b border-border/30 pb-4">
-                Color Palette
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {[
-                  "#1b1c19",
-                  "#800020",
-                  "#f5f4ef",
-                  "#c8c6c5",
-                  "#fd6673",
-                ].map((color) => (
-                  <button
-                    key={color}
-                    className="h-6 w-6 rounded-full border border-border hover:scale-110 transition-transform"
-                    style={{ backgroundColor: color }}
-                    aria-label={`Color ${color}`}
-                  />
-                ))}
-              </div>
-            </div>
           </div>
         </aside>
 

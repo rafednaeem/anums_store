@@ -22,14 +22,6 @@ export default function ShopLoading() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-6">
-                <div className="h-3 w-12 animate-pulse bg-muted rounded" />
-                <div className="grid grid-cols-3 gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-9 animate-pulse bg-muted rounded" />
-                  ))}
-                </div>
-              </div>
             </div>
           </aside>
 
