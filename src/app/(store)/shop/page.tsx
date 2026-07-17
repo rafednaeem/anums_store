@@ -74,7 +74,7 @@ export default async function ShopPage({
             Receive exclusive access to new collection launches, private viewing
             invitations, and editorial stories.
           </p>
-          <form className="flex flex-col md:flex-row gap-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="flex flex-col md:flex-row gap-4">
             <input
               type="email"
               placeholder="ENTER YOUR EMAIL"
