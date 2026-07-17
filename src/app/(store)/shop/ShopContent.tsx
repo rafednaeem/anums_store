@@ -1,12 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, SlidersHorizontal } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { SlidersHorizontal, ChevronDown } from "lucide-react"
 import ProductCard from "@/components/store/ProductCard"
-import ProductGridSkeleton from "@/components/store/ProductGridSkeleton"
 import { cn } from "@/lib/utils"
 
 interface Product {
@@ -35,6 +32,14 @@ interface ShopContentProps {
   activeCategory?: string
 }
 
+const ITEMS_PER_PAGE = 9
+
+const sortOptions = [
+  { value: "newest", label: "Newest" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "price-desc", label: "Price: High to Low" },
+]
+
 export default function ShopContent({
   products,
   categories,
@@ -42,28 +47,26 @@ export default function ShopContent({
 }: ShopContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [search, setSearch] = useState("")
   const [sort, setSort] = useState("newest")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [sortOpen, setSortOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const sortRef = useRef<HTMLDivElement>(null)
 
   const productsWithImage = useMemo(() => {
     return products.map((p) => ({
       ...p,
-      cover_url: p.cover_url || p.product_images?.find((img) => img.is_primary)?.image_url || p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0]?.image_url || null,
+      cover_url:
+        p.cover_url ||
+        p.product_images?.find((img) => img.is_primary)?.image_url ||
+        p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0]
+          ?.image_url ||
+        null,
     }))
   }, [products])
 
   const sortedAndFiltered = useMemo(() => {
-    let result = [...productsWithImage]
-
-    if (search) {
-      const q = search.toLowerCase()
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.category?.name?.toLowerCase().includes(q)
-      )
-    }
+    const result = [...productsWithImage]
 
     switch (sort) {
       case "price-asc":
@@ -87,7 +90,13 @@ export default function ShopContent({
     }
 
     return result
-  }, [productsWithImage, search, sort])
+  }, [productsWithImage, sort])
+
+  const totalPages = Math.ceil(sortedAndFiltered.length / ITEMS_PER_PAGE)
+  const paginatedProducts = sortedAndFiltered.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
 
   function handleCategoryChange(slug: string | null) {
     const params = new URLSearchParams(searchParams.toString())
@@ -98,155 +107,297 @@ export default function ShopContent({
     }
     router.push(`/shop?${params.toString()}`, { scroll: false })
     setMobileFiltersOpen(false)
+    setCurrentPage(1)
   }
 
+  // Close sort dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
+
+  // Scroll-triggered animation for product cards
+  useEffect(() => {
+    const cards = document.querySelectorAll(".shop-product-card")
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.classList.add("shop-card-visible")
+            }, index * 80)
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.1 }
+    )
+    cards.forEach((card) => observer.observe(card))
+    return () => observer.disconnect()
+  }, [paginatedProducts])
+
+  const activeCategoryName = activeCategory
+    ? categories.find((c) => c.slug === activeCategory)?.name
+    : null
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-8 lg:flex-row">
-        {/* Desktop Sidebar */}
-        <aside className="hidden w-64 flex-shrink-0 lg:block">
-          <h2 className="font-heading text-lg font-bold text-ethereal-dark">
-            Categories
-          </h2>
-          <div className="mt-4 space-y-1">
-            <button
-              onClick={() => handleCategoryChange(null)}
-              className={cn(
-                "block w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-                !activeCategory
-                  ? "bg-ethereal-dark text-white"
-                  : "text-muted-foreground hover:bg-ethereal-cream hover:text-ethereal-dark"
-              )}
-            >
-              All Products
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryChange(cat.slug)}
-                className={cn(
-                  "block w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-                  activeCategory === cat.slug
-                    ? "bg-ethereal-dark text-white"
-                    : "text-muted-foreground hover:bg-ethereal-cream hover:text-ethereal-dark"
-                )}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <div className="flex-1">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="font-heading text-3xl font-bold text-ethereal-dark">
-                Shop
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {sortedAndFiltered.length} product
-                {sortedAndFiltered.length !== 1 ? "s" : ""} found
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search products..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 sm:w-64"
-                />
-              </div>
-
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="flex h-10 rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2"
-              >
-                <option value="newest">Newest</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-              </select>
-
-              <Button
-                variant="outline"
-                size="icon"
-                className="lg:hidden"
-                onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Filters */}
-          {mobileFiltersOpen && (
-            <div className="mt-4 rounded-lg border border-ethereal-silver/30 bg-white p-4 lg:hidden">
-              <h3 className="font-medium text-ethereal-dark">Categories</h3>
-              <div className="mt-3 space-y-1">
-                <button
-                  onClick={() => handleCategoryChange(null)}
-                  className={cn(
-                    "block w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-                    !activeCategory
-                      ? "bg-ethereal-dark text-white"
-                      : "text-muted-foreground hover:bg-ethereal-cream"
-                  )}
-                >
-                  All Products
-                </button>
-                {categories.map((cat) => (
+    <section className="px-5 md:px-16 pb-24">
+      <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-16 md:gap-16">
+        {/* ── Desktop Sidebar ── */}
+        <aside className="hidden md:block">
+          <div className="sticky top-32 space-y-12">
+            {/* Category Filter */}
+            <div className="space-y-6">
+              <h3 className="text-[12px] font-semibold uppercase tracking-[0.1em] border-b border-border/30 pb-4">
+                Categories
+              </h3>
+              <ul className="space-y-4">
+                <li>
                   <button
-                    key={cat.id}
-                    onClick={() => handleCategoryChange(cat.slug)}
+                    onClick={() => handleCategoryChange(null)}
                     className={cn(
-                      "block w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-                      activeCategory === cat.slug
-                        ? "bg-ethereal-dark text-white"
-                        : "text-muted-foreground hover:bg-ethereal-cream"
+                      "text-sm transition-colors text-left w-full",
+                      !activeCategory
+                        ? "text-ethereal-dark font-medium"
+                        : "text-muted-foreground hover:text-ethereal-dark"
                     )}
                   >
-                    {cat.name}
+                    All Collections
+                  </button>
+                </li>
+                {categories.map((cat) => (
+                  <li key={cat.id}>
+                    <button
+                      onClick={() => handleCategoryChange(cat.slug)}
+                      className={cn(
+                        "text-sm transition-colors text-left w-full",
+                        activeCategory === cat.slug
+                          ? "text-ethereal-dark font-medium"
+                          : "text-muted-foreground hover:text-ethereal-dark"
+                      )}
+                    >
+                      {cat.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Size Filter (decorative — functional sizes come from product variants) */}
+            <div className="space-y-6">
+              <h3 className="text-[12px] font-semibold uppercase tracking-[0.1em] border-b border-border/30 pb-4">
+                Size
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                  <button
+                    key={size}
+                    className="border border-border py-2 text-[12px] font-semibold uppercase tracking-[0.1em] hover:bg-ethereal-dark hover:text-white transition-colors"
+                  >
+                    {size}
                   </button>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Product Grid */}
-          <div className="mt-8">
-            {sortedAndFiltered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-ethereal-silver/50 bg-ethereal-cream/30 py-20 text-center">
-                <p className="font-heading text-lg font-semibold text-ethereal-dark">
-                  No products found
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Try adjusting your search or filter criteria.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    setSearch("")
-                    handleCategoryChange(null)
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3">
-                {sortedAndFiltered.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+            {/* Color Palette (decorative) */}
+            <div className="space-y-6">
+              <h3 className="text-[12px] font-semibold uppercase tracking-[0.1em] border-b border-border/30 pb-4">
+                Color Palette
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  "#1b1c19",
+                  "#800020",
+                  "#f5f4ef",
+                  "#c8c6c5",
+                  "#fd6673",
+                ].map((color) => (
+                  <button
+                    key={color}
+                    className="h-6 w-6 rounded-full border border-border hover:scale-110 transition-transform"
+                    style={{ backgroundColor: color }}
+                    aria-label={`Color ${color}`}
+                  />
                 ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Main Content ── */}
+        <div className="space-y-12">
+          {/* Sorting & Count Bar */}
+          <div className="flex justify-between items-center border-b border-border/30 pb-4">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              Showing {paginatedProducts.length} of {sortedAndFiltered.length} Items
+            </p>
+
+            <div className="relative" ref={sortRef}>
+              <button
+                onClick={() => setSortOpen(!sortOpen)}
+                className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.1em] hover:text-ethereal-maroon transition-colors"
+              >
+                Sort By: {sortOptions.find((o) => o.value === sort)?.label}
+                <ChevronDown className={cn("h-3 w-3 transition-transform", sortOpen && "rotate-180")} />
+              </button>
+
+              {sortOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-border/30 shadow-lg z-20">
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSort(option.value)
+                        setSortOpen(false)
+                        setCurrentPage(1)
+                      }}
+                      className={cn(
+                        "block w-full text-left px-4 py-3 text-sm transition-colors hover:bg-muted",
+                        sort === option.value
+                          ? "text-ethereal-dark font-medium"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Filter Toggle */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+              className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground hover:text-ethereal-dark transition-colors"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {activeCategoryName && (
+                <span className="text-ethereal-dark">— {activeCategoryName}</span>
+              )}
+            </button>
+
+            {mobileFiltersOpen && (
+              <div className="mt-4 border border-border/30 bg-white p-6 space-y-6">
+                <div className="space-y-4">
+                  <h4 className="text-[12px] font-semibold uppercase tracking-[0.1em]">
+                    Categories
+                  </h4>
+                  <button
+                    onClick={() => handleCategoryChange(null)}
+                    className={cn(
+                      "block w-full text-left py-2 text-sm transition-colors",
+                      !activeCategory
+                        ? "text-ethereal-dark font-medium"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    All Collections
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => handleCategoryChange(cat.slug)}
+                      className={cn(
+                        "block w-full text-left py-2 text-sm transition-colors",
+                        activeCategory === cat.slug
+                          ? "text-ethereal-dark font-medium"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
+
+          {/* Product Grid */}
+          {sortedAndFiltered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center border border-dashed border-border/50 bg-muted/30 py-20 text-center">
+              <p className="font-heading text-lg text-ethereal-dark">
+                No products found
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Try adjusting your search or filter criteria.
+              </p>
+              <button
+                onClick={() => handleCategoryChange(null)}
+                className="mt-4 border border-ethereal-dark px-6 py-3 text-xs font-medium uppercase tracking-widest text-ethereal-dark hover:bg-ethereal-dark hover:text-white transition-all"
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
+              {paginatedProducts.map((product) => (
+                <div key={product.id} className="shop-product-card">
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="pt-16 flex justify-center items-center gap-8 border-t border-border/30">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className={cn(
+                  "text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors",
+                  currentPage === 1
+                    ? "opacity-30 cursor-not-allowed"
+                    : "text-ethereal-dark hover:text-ethereal-maroon"
+                )}
+              >
+                Previous
+              </button>
+
+              <div className="flex gap-6">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={cn(
+                        "text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors",
+                        currentPage === page
+                          ? "text-ethereal-dark border-b border-ethereal-dark"
+                          : "text-muted-foreground hover:text-ethereal-dark"
+                      )}
+                    >
+                      {String(page).padStart(2, "0")}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className={cn(
+                  "text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors",
+                  currentPage === totalPages
+                    ? "opacity-30 cursor-not-allowed"
+                    : "text-ethereal-dark hover:text-ethereal-maroon"
+                )}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </section>
   )
 }
