@@ -4,15 +4,16 @@ import { useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 
-const demoProducts: Array<{
+type DisplayProduct = {
   id: string
   slug: string
   name: string
   price: number
-  cover_url?: string | null
   image: string
   badge?: string | null
-}> = [
+}
+
+const demoProducts: DisplayProduct[] = [
   {
     id: "1",
     slug: "silk-chiffon-drapery",
@@ -50,7 +51,15 @@ export default function HomeContent({
     cover_url?: string | null
   }>
 }) {
-  const items = products?.length ? products : demoProducts
+  const items: DisplayProduct[] = products?.length
+    ? products.map((p) => ({
+        id: p.id,
+        slug: p.slug,
+        name: p.name,
+        price: p.price,
+        image: p.cover_url || "/home/product-1.jpg",
+      }))
+    : demoProducts
   const sectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -145,15 +154,15 @@ export default function HomeContent({
             >
               <div className="aspect-[3/4] overflow-hidden bg-surface-container mb-6 relative">
                 <Image
-                  src={"cover_url" in product ? (product.cover_url || product.image) : product.image}
+                  src={product.image}
                   alt={product.name}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-700"
                   sizes="(max-width: 768px) 100vw, 33vw"
                 />
-                {"badge" in product && product.badge && (
+                {product.badge && (
                   <div className="absolute top-4 left-4 bg-heritage-accent text-white font-label-caps text-[10px] px-3 py-1 uppercase">
-                    {String(product.badge)}
+                    {product.badge}
                   </div>
                 )}
               </div>
