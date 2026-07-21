@@ -64,6 +64,25 @@ export default function HomeContent({
         </div>
       </section>
 
+      {/* ── Marquee Banner ──────────────────────────── */}
+      <div className="overflow-hidden border-y bg-ethereal-dark py-3">
+        <div className="animate-marquee flex whitespace-nowrap">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <span
+              key={i}
+              className="mx-8 text-xs font-medium uppercase tracking-widest text-white/80"
+            >
+              Free Shipping on Orders Over Rs. 5,000
+              <span className="mx-4 text-ethereal-maroon">&#10022;</span>
+              New Bridal Collection Now Available
+              <span className="mx-4 text-ethereal-maroon">&#10022;</span>
+              Handcrafted with Love
+              <span className="mx-4 text-ethereal-maroon">&#10022;</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
       {/* ── Featured Products ───────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="text-center">
