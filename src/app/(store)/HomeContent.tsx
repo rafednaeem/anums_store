@@ -4,7 +4,15 @@ import { useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 
-const demoProducts = [
+const demoProducts: Array<{
+  id: string
+  slug: string
+  name: string
+  price: number
+  cover_url?: string | null
+  image: string
+  badge?: string | null
+}> = [
   {
     id: "1",
     slug: "silk-chiffon-drapery",
@@ -30,10 +38,6 @@ const demoProducts = [
     badge: null,
   },
 ]
-
-function formatPrice(price: number) {
-  return `PKR ${price.toLocaleString()}`
-}
 
 export default function HomeContent({
   products,
@@ -141,7 +145,7 @@ export default function HomeContent({
             >
               <div className="aspect-[3/4] overflow-hidden bg-surface-container mb-6 relative">
                 <Image
-                  src={product.cover_url || product.image}
+                  src={"cover_url" in product ? (product.cover_url || product.image) : product.image}
                   alt={product.name}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -157,9 +161,7 @@ export default function HomeContent({
                 {product.name}
               </h3>
               <p className="font-label-caps text-[12px] tracking-[0.1em] text-on-surface-variant">
-                {"price" in product
-                  ? formatPrice(product.price)
-                  : ""}
+                PKR {product.price.toLocaleString()}
               </p>
             </Link>
           ))}
