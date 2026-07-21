@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { storeName } from "@/lib/constants"
 
 const quickLinks = [
@@ -19,9 +20,18 @@ export default function Footer() {
     <footer className="w-full py-[120px] px-5 md:px-16 flex flex-col items-center gap-8 bg-surface border-t border-outline-variant/30">
       <div className="flex flex-col md:flex-row justify-between w-full items-center md:items-start gap-12">
         <div className="text-center md:text-left">
-          <h2 className="font-headline-md text-[28px] leading-[36px] text-primary mb-4 uppercase tracking-[0.4em]">
-            {storeName}
-          </h2>
+          <div className="flex items-center gap-3 mb-4 justify-center md:justify-start">
+            <Image
+              src="/logo.png"
+              alt={storeName}
+              width={40}
+              height={40}
+              className="rounded-lg"
+            />
+            <h2 className="font-headline-md text-[28px] leading-[36px] text-primary uppercase tracking-[0.4em]">
+              {storeName}
+            </h2>
+          </div>
           <p className="font-body-md text-[16px] leading-[24px] text-on-surface-variant max-w-xs">
             Curating Pakistan&apos;s finest artisanal heritage for the modern
             wardrobe.

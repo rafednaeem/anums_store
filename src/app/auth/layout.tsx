@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { storeName } from "@/lib/constants"
 
 const footerLinks = [
@@ -20,9 +21,18 @@ export default function AuthLayout({
       <header className="fixed top-0 z-50 flex h-20 w-full items-center justify-center bg-[#faf9f4]/80 px-5 backdrop-blur-md">
         <Link
           href="/"
-          className="font-heading text-xl font-semibold uppercase tracking-widest text-ethereal-dark sm:text-2xl"
+          className="flex items-center gap-2"
         >
-          {storeName}
+          <Image
+            src="/logo.png"
+            alt={storeName}
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
+          <span className="font-heading text-xl font-semibold uppercase tracking-widest text-ethereal-dark sm:text-2xl">
+            {storeName}
+          </span>
         </Link>
       </header>
 

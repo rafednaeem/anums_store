@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Menu, X, User, Heart, ShoppingBag } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { storeName } from "@/lib/constants"
@@ -74,9 +75,18 @@ export default function Header() {
         {/* Brand */}
         <Link
           href="/"
-          className="absolute left-1/2 -translate-x-1/2 font-heading text-xl font-semibold tracking-wide text-ethereal-dark sm:text-2xl"
+          className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2"
         >
-          {storeName}
+          <Image
+            src="/logo.png"
+            alt={storeName}
+            width={36}
+            height={36}
+            className="rounded-lg"
+          />
+          <span className="font-heading text-xl font-semibold tracking-wide text-ethereal-dark sm:text-2xl hidden sm:block">
+            {storeName}
+          </span>
         </Link>
 
         {/* Right icons */}
@@ -117,9 +127,18 @@ export default function Header() {
           {/* Drawer panel */}
           <div className="fixed inset-y-0 left-0 z-50 flex w-full max-w-sm flex-col bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-4">
-              <span className="font-heading text-xl font-semibold text-ethereal-dark">
-                {storeName}
-              </span>
+              <div className="flex items-center gap-2">
+                <Image
+                  src="/logo.png"
+                  alt={storeName}
+                  width={32}
+                  height={32}
+                  className="rounded-lg"
+                />
+                <span className="font-heading text-xl font-semibold text-ethereal-dark">
+                  {storeName}
+                </span>
+              </div>
               <button
                 type="button"
                 className="rounded-md p-2 text-ethereal-dark hover:bg-ethereal-cream"

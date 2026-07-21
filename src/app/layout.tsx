@@ -30,6 +30,9 @@ export const metadata: Metadata = {
   },
   description:
     "Discover handcrafted products that blend tradition with modern elegance. Anums Store offers curated collections with timeless design and sustainable craftsmanship.",
+  icons: {
+    icon: "/favicon.png",
+  },
   openGraph: {
     type: "website",
     siteName: storeName,
