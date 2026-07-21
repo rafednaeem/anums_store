@@ -169,7 +169,7 @@ export default async function PrivacyPolicyPage() {
               {cms(content, "contact_section", "title", "Contact Us")}
             </h2>
             <p>
-              {cms(content, "contact_section", "description", "If you have any questions about this Privacy Policy or how we handle your data, please contact us at info@anumsstore.pk.")}
+              {cms(content, "contact_section", "description", "If you have any questions about this Privacy Policy or how we handle your data, please contact us at info@avosira.com.")}
             </p>
           </div>
         </div>

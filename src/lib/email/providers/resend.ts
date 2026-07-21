@@ -15,7 +15,7 @@ export class ResendProvider implements EmailProvider {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'Anums Store <onboarding@resend.dev>',
+        from: process.env.EMAIL_FROM || 'Anums Store <auth@avosira.com>',
         to: [params.to],
         subject: params.subject,
         html: params.html,

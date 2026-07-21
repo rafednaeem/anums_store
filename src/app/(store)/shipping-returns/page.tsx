@@ -135,7 +135,7 @@ export default async function ShippingReturnsPage() {
           {/* Contact */}
           <div className="border-t border-outline-variant/20 pt-12">
             <p className="font-body-md text-[16px] leading-[24px] text-on-surface-variant italic">
-              {cms(content, "contact_note", "text", "For any questions about shipping or returns, please reach out to us at info@anumsstore.pk or via WhatsApp.")}
+              {cms(content, "contact_note", "text", "For any questions about shipping or returns, please reach out to us at info@avosira.com or via WhatsApp.")}
             </p>
           </div>
         </div>

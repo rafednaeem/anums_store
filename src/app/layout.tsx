@@ -22,7 +22,7 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_BASE_URL || "https://anumsstore.pk"
+    process.env.NEXT_PUBLIC_BASE_URL || "https://avosira.com"
   ),
   title: {
     template: `%s | ${storeName}`,
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     images: ["/og-image.jpg"],
   },
   alternates: {
-    canonical: process.env.NEXT_PUBLIC_BASE_URL || "https://anumsstore.pk",
+    canonical: process.env.NEXT_PUBLIC_BASE_URL || "https://avosira.com",
   },
 };
 

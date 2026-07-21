@@ -113,7 +113,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 type="email"
                 value={settings.store_email ?? ""}
                 onChange={(e) => update("store_email", e.target.value)}
-                placeholder="info@anumsstore.pk"
+                placeholder="info@avosira.com"
               />
             </div>
             <div className="space-y-2">

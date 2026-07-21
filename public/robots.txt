@@ -7,4 +7,4 @@ Host: https://anumsstore.netlify.app
 
 # Sitemaps
 Sitemap: https://anumsstore.netlify.app/sitemap.xml
-Sitemap: https://anumsstore.pk/server-sitemap.xml
+Sitemap: https://avosira.com/server-sitemap.xml

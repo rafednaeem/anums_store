@@ -88,13 +88,14 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 # Store
 NEXT_PUBLIC_STORE_NAME=Anums Store
-NEXT_PUBLIC_BASE_URL=https://anumsstore.pk
-NEXT_PUBLIC_STORE_EMAIL=info@anumsstore.pk
+NEXT_PUBLIC_BASE_URL=https://avosira.com
+NEXT_PUBLIC_STORE_EMAIL=info@avosira.com
 NEXT_PUBLIC_STORE_PHONE=+923224183457
 NEXT_PUBLIC_WHATSAPP_NUMBER=923224183457
 
 # Email (optional)
 RESEND_API_KEY=
+EMAIL_FROM=Anums Store <auth@avosira.com>
 
 # Analytics (optional)
 NEXT_PUBLIC_GA_ID=

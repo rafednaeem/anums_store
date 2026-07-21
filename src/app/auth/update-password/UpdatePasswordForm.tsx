@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -19,6 +19,7 @@ import {
 export function UpdatePasswordForm() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isSessionReady, setIsSessionReady] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
@@ -33,6 +34,38 @@ export function UpdatePasswordForm() {
       confirm_password: "",
     },
   })
+
+  useEffect(() => {
+    const supabase = createClient()
+    const hash = window.location.hash
+
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1))
+      const accessToken = params.get("access_token")
+      const refreshToken = params.get("refresh_token")
+
+      if (accessToken && refreshToken) {
+        supabase.auth
+          .setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          .then(({ error }) => {
+            if (error) {
+              toast.error("Invalid or expired reset link. Please request a new one.")
+              router.push("/auth/reset-password")
+            } else {
+              setIsSessionReady(true)
+              window.history.replaceState(null, "", window.location.pathname)
+            }
+          })
+      } else {
+        setIsSessionReady(true)
+      }
+    } else {
+      setIsSessionReady(true)
+    }
+  }, [router])
 
   async function onSubmit(data: UpdatePasswordInput) {
     setIsLoading(true)
@@ -55,6 +88,14 @@ export function UpdatePasswordForm() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (!isSessionReady) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
