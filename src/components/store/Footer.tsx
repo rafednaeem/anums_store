@@ -1,42 +1,82 @@
 import Link from "next/link"
 import { storeName } from "@/lib/constants"
 
-const footerLinks = [
+const quickLinks = [
+  { href: "/shop", label: "Shop All" },
+  { href: "/our-story", label: "Our Story" },
+  { href: "/contact", label: "Contact Us" },
+]
+
+const assistanceLinks = [
   { href: "/privacy-policy", label: "Privacy Policy" },
   { href: "/shipping-returns", label: "Shipping & Returns" },
-  { href: "/contact", label: "Contact Us" },
 ]
 
 export default function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="border-t bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
-          <div className="text-center md:text-left">
-            <p className="font-heading text-xl font-semibold text-ethereal-dark">
-              {storeName}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              &copy; {year} {storeName}. All rights reserved.
-            </p>
+    <footer className="w-full py-[120px] px-5 md:px-16 flex flex-col items-center gap-8 bg-surface border-t border-outline-variant/30">
+      <div className="flex flex-col md:flex-row justify-between w-full items-center md:items-start gap-12">
+        <div className="text-center md:text-left">
+          <h2 className="font-headline-md text-[28px] leading-[36px] text-primary mb-4 uppercase tracking-[0.4em]">
+            {storeName}
+          </h2>
+          <p className="font-body-md text-[16px] leading-[24px] text-on-surface-variant max-w-xs">
+            Curating Pakistan&apos;s finest artisanal heritage for the modern
+            wardrobe.
+          </p>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-12 text-center md:text-left">
+          <div className="flex flex-col gap-4">
+            <span className="font-label-caps text-[12px] tracking-[0.1em] text-primary uppercase">
+              Quick Links
+            </span>
+            {quickLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="font-body-md text-[16px] leading-[24px] text-on-surface-variant hover:text-heritage-accent transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
 
-          <nav aria-label="Footer navigation">
-            <ul className="flex flex-wrap justify-center gap-6">
-              {footerLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-ethereal-dark"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <div className="flex flex-col gap-4">
+            <span className="font-label-caps text-[12px] tracking-[0.1em] text-primary uppercase">
+              Assistance
+            </span>
+            {assistanceLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="font-body-md text-[16px] leading-[24px] text-on-surface-variant hover:text-heritage-accent transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full h-px bg-black/10 my-8" />
+
+      <div className="flex flex-col md:flex-row justify-between w-full items-center gap-4">
+        <span className="font-body-md text-[16px] leading-[24px] text-on-surface-variant opacity-70">
+          &copy; {year} {storeName}. All Rights Reserved.
+        </span>
+        <div className="flex gap-8">
+          <span className="font-label-caps text-[10px] text-on-surface-variant opacity-50 uppercase">
+            Lahore
+          </span>
+          <span className="font-label-caps text-[10px] text-on-surface-variant opacity-50 uppercase">
+            London
+          </span>
+          <span className="font-label-caps text-[10px] text-on-surface-variant opacity-50 uppercase">
+            Dubai
+          </span>
         </div>
       </div>
     </footer>
