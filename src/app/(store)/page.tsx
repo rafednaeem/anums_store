@@ -44,7 +44,11 @@ export default async function StoreHomePage() {
     slug: p.slug,
     name: p.name,
     price: p.price,
+    sale_price: p.sale_price ?? null,
+    is_on_sale: p.is_on_sale ?? false,
     cover_url: p.cover_url || p.product_images?.find((img: { is_primary: boolean }) => img.is_primary)?.image_url || p.product_images?.sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)?.[0]?.image_url || null,
+    inventory_count: p.inventory_count ?? 0,
+    category: p.category ?? null,
   }))
 
   return (

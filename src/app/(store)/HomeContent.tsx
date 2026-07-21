@@ -3,42 +3,7 @@
 import { useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
-
-type DisplayProduct = {
-  id: string
-  slug: string
-  name: string
-  price: number
-  image: string
-  badge?: string | null
-}
-
-const demoProducts: DisplayProduct[] = [
-  {
-    id: "1",
-    slug: "silk-chiffon-drapery",
-    name: "Silk Chiffon Drapery",
-    price: 45000,
-    image: "/home/product-1.jpg",
-    badge: "New Arrival",
-  },
-  {
-    id: "2",
-    slug: "gilded-artisan-kurta",
-    name: "Gilded Artisan Kurta",
-    price: 32500,
-    image: "/home/product-2.jpg",
-    badge: null,
-  },
-  {
-    id: "3",
-    slug: "terracotta-fusion-set",
-    name: "Terracotta Fusion Set",
-    price: 28900,
-    image: "/home/product-3.jpg",
-    badge: null,
-  },
-]
+import ProductCard from "@/components/store/ProductCard"
 
 export default function HomeContent({
   products,
@@ -48,18 +13,13 @@ export default function HomeContent({
     slug: string
     name: string
     price: number
-    cover_url?: string | null
+    sale_price: number | null
+    is_on_sale: boolean
+    cover_url: string | null
+    inventory_count: number
+    category?: { name: string } | null
   }>
 }) {
-  const items: DisplayProduct[] = products?.length
-    ? products.map((p) => ({
-        id: p.id,
-        slug: p.slug,
-        name: p.name,
-        price: p.price,
-        image: p.cover_url || "/home/product-1.jpg",
-      }))
-    : demoProducts
   const sectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -83,97 +43,50 @@ export default function HomeContent({
   return (
     <main ref={sectionRef} className="bg-background text-on-surface">
       {/* ── Hero ────────────────────────────────────── */}
-      <section className="relative h-[921px] overflow-hidden flex items-center">
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/home/hero.jpg"
-            alt="Woman in contemporary Pakistani couture in a minimalist architectural space"
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority
-          />
-          <div className="absolute inset-0 bg-black/10" />
-        </div>
-        <div className="relative z-10 px-5 md:px-16 max-w-4xl">
-          <span className="font-label-caps text-[12px] tracking-[0.2em] text-white mb-4 block uppercase">
-            Autumn Winter &apos;24
-          </span>
-          <h1 className="font-display-lg text-[64px] leading-[72px] tracking-[-0.02em] md:text-[84px] text-white mb-6">
+      <section className="relative overflow-hidden bg-gradient-to-br from-ethereal-cream via-white to-ethereal-cream">
+        <div className="mx-auto flex min-h-[70vh] max-w-7xl flex-col items-center justify-center px-4 text-center sm:px-6 lg:px-8">
+          <p className="mb-4 text-sm font-medium uppercase tracking-widest text-ethereal-maroon">
+            New Season
+          </p>
+          <h1 className="font-heading text-4xl font-bold tracking-tight text-ethereal-dark sm:text-5xl lg:text-6xl">
             Curated Pakistani Fashion
           </h1>
-          <p className="font-body-lg text-[18px] leading-[28px] text-white/90 max-w-xl mb-10">
+          <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
             Discover collections that blend traditional artistry with modern
-            silhouettes. Each piece is a testament to heritage craftsmanship
-            reimagined for the contemporary woman.
+            silhouettes — crafted for the contemporary woman.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link
-              href="/shop"
-              className="bg-primary text-white font-button text-[14px] leading-[20px] tracking-[0.05em] px-10 py-4 uppercase hover:bg-primary/90 transition-all text-center"
-            >
-              Explore Collection
-            </Link>
-            <Link
-              href="/shop"
-              className="border border-white text-white font-button text-[14px] leading-[20px] tracking-[0.05em] px-10 py-4 uppercase hover:bg-white hover:text-black transition-all text-center"
-            >
-              View Lookbook
-            </Link>
-          </div>
+          <Link
+            href="/shop"
+            className="mt-8 inline-flex items-center rounded-md bg-ethereal-dark px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-ethereal-dark/90"
+          >
+            Shop Collection
+          </Link>
         </div>
       </section>
 
       {/* ── Featured Products ───────────────────────── */}
-      <section className="py-[120px] px-5 md:px-16 max-w-[1440px] mx-auto">
-        <div className="flex justify-between items-end mb-16">
-          <div className="max-w-xl">
-            <h2 className="font-headline-lg text-[40px] leading-[48px] mb-4">
-              The Seasonal Edit
-            </h2>
-            <p className="font-body-md text-[16px] leading-[24px] text-on-surface-variant">
-              Handpicked essentials that define this season&apos;s aesthetic.
-              Limited editions featuring exquisite hand-embellishments and
-              premium fabrics.
-            </p>
-          </div>
-          <Link
-            href="/shop"
-            className="font-label-caps text-[12px] tracking-[0.1em] border-b border-primary pb-1 hidden md:block uppercase"
-          >
-            View All Products
-          </Link>
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <h2 className="font-heading text-3xl font-bold text-ethereal-dark">
+            Featured
+          </h2>
+          <p className="mt-2 text-muted-foreground">
+            Handpicked favourites from our latest collections.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {items.slice(0, 3).map((product) => (
-            <Link
-              key={product.id}
-              href={`/products/${product.slug}`}
-              className="group cursor-pointer"
-            >
-              <div className="aspect-[3/4] overflow-hidden bg-surface-container mb-6 relative">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-700"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-                {product.badge && (
-                  <div className="absolute top-4 left-4 bg-heritage-accent text-white font-label-caps text-[10px] px-3 py-1 uppercase">
-                    {product.badge}
-                  </div>
-                )}
-              </div>
-              <h3 className="font-body-lg text-[18px] leading-[28px] mb-1 group-hover:underline">
-                {product.name}
-              </h3>
-              <p className="font-label-caps text-[12px] tracking-[0.1em] text-on-surface-variant">
-                PKR {product.price.toLocaleString()}
+        <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {products && products.length > 0 ? (
+            products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center rounded-lg border border-dashed border-ethereal-silver/50 bg-ethereal-cream/30 py-20 text-center">
+              <p className="text-sm text-muted-foreground">
+                Products coming soon. Check back shortly.
               </p>
-            </Link>
-          ))}
+            </div>
+          )}
         </div>
       </section>
 
