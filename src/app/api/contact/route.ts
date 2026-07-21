@@ -64,9 +64,9 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (insertError) {
-    console.error('Failed to insert inquiry:', insertError.message);
+    console.error('Failed to insert inquiry:', insertError.message, insertError.details, insertError.hint);
     return NextResponse.json(
-      { error: 'Failed to submit inquiry. Please try again.' },
+      { error: `Database error: ${insertError.message}`, details: insertError.details, hint: insertError.hint },
       { status: 500 }
     );
   }

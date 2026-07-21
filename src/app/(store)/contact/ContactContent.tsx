@@ -47,7 +47,8 @@ export default function ContactContent({
 
       const result = await res.json()
       if (!res.ok) {
-        throw new Error(result.error || "Failed to send message")
+        const detail = [result.error, result.details, result.hint].filter(Boolean).join(" | ")
+        throw new Error(detail || `HTTP ${res.status}`)
       }
 
       setIsSuccess(true)
