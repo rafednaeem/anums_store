@@ -10,25 +10,25 @@ const heroStats = [
 
 const bentoItems = [
   {
-    image: "/bridal/celestial-veil.svg",
+    image: "/bridal/celestial-veil.jpg",
     alt: "Bride walking through minimalist white marble hall with trailing dupatta",
     label: "The Celestial Veil",
     span: "md:col-span-2 md:row-span-2",
   },
   {
-    image: "/bridal/master-craftsman.svg",
+    image: "/bridal/master-craftsman.jpg",
     alt: "Artisan hands weaving gold threads into floral pattern on embroidery frame",
     label: "Master Craftsman at Work",
     span: "md:col-span-2 md:row-span-1",
   },
   {
-    image: "/bridal/heritage-jewelry.svg",
+    image: "/bridal/heritage-jewelry.jpg",
     alt: "Gold jhumkas and maang tikka on raw silk",
     label: "Heritage Jewelry",
     span: "md:col-span-1 md:row-span-1",
   },
   {
-    image: "/bridal/bridal-details.svg",
+    image: "/bridal/bridal-details.jpg",
     alt: "Henna-patterned hands holding delicate lace handkerchief",
     label: "Bridal Details",
     span: "md:col-span-1 md:row-span-1",
@@ -85,7 +85,7 @@ export default function BridalContent() {
           <div
             className="parallax-bg w-full h-full bg-cover bg-center transition-transform duration-[10s]"
             style={{
-              backgroundImage: "url('/bridal/hero.svg')",
+              backgroundImage: "url('/bridal/hero.jpg')",
               transform: `scale(${heroScale})`,
             }}
             aria-hidden="true"
@@ -143,7 +143,7 @@ export default function BridalContent() {
           <div className="md:col-span-7 reveal-on-scroll">
             <div className="relative aspect-[4/5] w-full overflow-hidden">
               <Image
-                src="/bridal/masterpiece.svg"
+                src="/bridal/masterpiece.jpg"
                 alt="Detailed silver and pearl embroidery on deep crimson bridal gown"
                 fill
                 className="object-cover transition-transform duration-700 hover:scale-105"
@@ -225,7 +225,7 @@ export default function BridalContent() {
           <div
             className="w-full h-full bg-cover bg-center"
             style={{
-              backgroundImage: "url('/bridal/consultation-bg.svg')",
+              backgroundImage: "url('/bridal/consultation-bg.jpg')",
             }}
             aria-hidden="true"
           />
