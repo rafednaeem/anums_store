@@ -37,8 +37,23 @@ export function UpdatePasswordForm() {
 
   useEffect(() => {
     const supabase = createClient()
-    const hash = window.location.hash
+    const url = new URL(window.location.href)
+    const code = url.searchParams.get("code")
 
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          toast.error("Invalid or expired reset link. Please request a new one.")
+          router.push("/auth/reset-password")
+        } else {
+          setIsSessionReady(true)
+          window.history.replaceState(null, "", window.location.pathname)
+        }
+      })
+      return
+    }
+
+    const hash = window.location.hash
     if (hash) {
       const params = new URLSearchParams(hash.substring(1))
       const accessToken = params.get("access_token")
@@ -59,12 +74,11 @@ export function UpdatePasswordForm() {
               window.history.replaceState(null, "", window.location.pathname)
             }
           })
-      } else {
-        setIsSessionReady(true)
+        return
       }
-    } else {
-      setIsSessionReady(true)
     }
+
+    setIsSessionReady(true)
   }, [router])
 
   async function onSubmit(data: UpdatePasswordInput) {
@@ -94,6 +108,7 @@ export function UpdatePasswordForm() {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">Verifying reset link...</span>
       </div>
     )
   }

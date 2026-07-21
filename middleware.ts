@@ -4,6 +4,13 @@ import { type NextRequest } from "next/server";
 const SESSION_TOKEN_COOKIE = "app_session_token";
 
 export async function middleware(request: NextRequest) {
+  const code = request.nextUrl.searchParams.get("code");
+  if (code && !request.nextUrl.pathname.startsWith("/auth/update-password")) {
+    const redirectUrl = new URL("/auth/update-password", request.url);
+    redirectUrl.searchParams.set("code", code);
+    return Response.redirect(redirectUrl);
+  }
+
   const { supabase, response } = await updateSession(request);
 
   let user = null;
@@ -116,5 +123,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/account/:path*", "/auth/:path*"],
+  matcher: ["/", "/admin/:path*", "/account/:path*", "/auth/:path*"],
 };
