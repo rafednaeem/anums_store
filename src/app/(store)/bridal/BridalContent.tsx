@@ -10,29 +10,25 @@ const heroStats = [
 
 const bentoItems = [
   {
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCrHUv8QCCZsSgzc7ztWQ2htu-Wsr-BEBJvECIP48R0SWfXSokNToa6H96fS2W8TREFXB317APd26rQ8egHiY8KQjEfcwqPJYjj4JsxB04X8U6uV7bK50iZJ-jd3D-d8zSKoJ0OiLZfI62W4mYGaaFOa0J6jPn-msrDMOXJFAvhWpyY2E7TsFW45PWpbDFYzWtM49_d9YkRP3GMqrY-IEzCLbSn6-A76PO9un2BCF0MbI6hHQuaP40-GcroRpMrXF8KGY33ILou_KE",
+    image: "/bridal/celestial-veil.svg",
     alt: "Bride walking through minimalist white marble hall with trailing dupatta",
     label: "The Celestial Veil",
     span: "md:col-span-2 md:row-span-2",
   },
   {
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCV2u_DlN-BR_zpdaxrjZT20uQ86vJcCPnjVYyPiD9qOYl66BdFN533fi-Xsq11IyMHxrUhBGdYB6mUPmqCJ1mjTiTMnkz02nokrtOKRpCNnstHJzOFeJhF79AEmgFBu_jQA9O-q1oKUDPOUjeV-_TMldH-rQDRO56x04c2W4MGRpwAnL1vbxyJbaqWVvMeJ5uHGpU6gAxWUU6sovl5jGFoNZyV_fpx5gG-o7dHE_gWxKftdjEb26KZ-rVu9AYTqgPyaE0xuu2h9Fk",
+    image: "/bridal/master-craftsman.svg",
     alt: "Artisan hands weaving gold threads into floral pattern on embroidery frame",
     label: "Master Craftsman at Work",
     span: "md:col-span-2 md:row-span-1",
   },
   {
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCjjZPR302iw4RXwDHT0RABFCkgXWGVlj7sf5vHnwAkp6KOIG1KgoUeydFyrnxitO0PypZ7cdOPsZiuZim_R1qpD-rBfGc-wokW9g6RuBkn7zSjoiNt7JpzfQ0lYBYlxJjgAu3as2kEblgBcBiZF2lutd-C7Fa3avjOOj7BQE35EBhPCRbYjtfV7S4Ii8SF2bsu2u2b0T6iZ7XrFA777Am6t1xWkHwF1WWwbJFG-kUIdne9Nw7AJ0zBOQHX1TQ6y_RBz70efISuYCM",
+    image: "/bridal/heritage-jewelry.svg",
     alt: "Gold jhumkas and maang tikka on raw silk",
     label: "Heritage Jewelry",
     span: "md:col-span-1 md:row-span-1",
   },
   {
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuC0BbszYsZgFJ5kZwLGUGUt1qxywZGXnth4uN4Qp8miCy9MIzD9uWqDHufqw1y7mx4ocQkjq89gelQZhwmORG7k5a_eDiDe0TjOy5AugkFeKHj4F-0McuvJ2lhOUFL8MJ1FuabGX9igI-ByL7H5paJfodhUzNtNyJjnHYSG_wTP4YqWm9UgNNIGBlKb_C-LM8OhtvqSLdgPWf_fVMcKeSTks6d05cocIQWkc1-MRprcH1tYxtmzfe5mE5UFfCM_w0N4O9hgsK35xek",
+    image: "/bridal/bridal-details.svg",
     alt: "Henna-patterned hands holding delicate lace handkerchief",
     label: "Bridal Details",
     span: "md:col-span-1 md:row-span-1",
@@ -53,7 +49,6 @@ export default function BridalContent() {
           img.style.transform = `translateY(${scroll * 0.4}px)`
         }
       }
-      // Scale down hero image on scroll
       if (scroll < 400) {
         setHeroScale(1.05 - scroll * 0.000125)
       }
@@ -90,8 +85,7 @@ export default function BridalContent() {
           <div
             className="parallax-bg w-full h-full bg-cover bg-center transition-transform duration-[10s]"
             style={{
-              backgroundImage:
-                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDq8_FVCVi5TdGbjUDIMpx2fOTRmHsj4Q6njs6FR_Ya_fofsw0lCgA0eLXN70cxaC6vnltdUmxi_L0d_Ntxdt3be377TAmrt7vqPTAd4X9cwRxRaRrCL-hcFCj16GvRI3q4cKuJaXsfPuTAVhg6uzTwCMZrRV7ejl9dZZQyMkWIDwL6R86D_f_sw4fKxXmndLtl2PICQMOCBlF_xjnYDF0uTyPgQgNKp_N77UMhXuPzrh8qbaGowAQAl-nnGvx1AC1SPMf9BaOJYZU')",
+              backgroundImage: "url('/bridal/hero.svg')",
               transform: `scale(${heroScale})`,
             }}
             aria-hidden="true"
@@ -149,7 +143,7 @@ export default function BridalContent() {
           <div className="md:col-span-7 reveal-on-scroll">
             <div className="relative aspect-[4/5] w-full overflow-hidden">
               <Image
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1bt-q-1oV02QJjziWWvTZ3keIt90a4I4k1dl0kkht05ettXeqcG0BTJbxu32vpLi-WA0r0nV7Fei4QoUfgPOqjjC6F4daylnCE_z22TcJVvDC2xIHy_hAkmo0o-3nJT8HB5GoDMv0XxRn4hzRgMl6gCd_Mfl5aBNfi_9I5EMlic8EnYdxYkIVHDnh5AfvwS5B5bQ2sPnx3va2cdKDfokA2vRrAVehpNK1ZSEUcoAAKlt0Gx5ArMUlB5WvGqGxCSz87REwkQCmtyA"
+                src="/bridal/masterpiece.svg"
                 alt="Detailed silver and pearl embroidery on deep crimson bridal gown"
                 fill
                 className="object-cover transition-transform duration-700 hover:scale-105"
@@ -231,8 +225,7 @@ export default function BridalContent() {
           <div
             className="w-full h-full bg-cover bg-center"
             style={{
-              backgroundImage:
-                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDLKChFRJgJrrnaBNw-uNaie5Jo4cQggooPehYsBvUBXTPIRUBO-ejBFZUWiXzIF3ZVjAsEKZg-aUMPiltNEQIe2JuJ-VpmYTJ5iIpoX9XNETmNKT8EA6CF99-Jn64PM1S92tfQdUvH08bfA7JD9edxrMUw_Tr22xHzSCcve444YnQclWHp9I4rNFVs0goHH9YfhPG-bBddvTyoKKz3apa83xGTsOvU-hPWXl4xdGYT8SZEusnY85kOEIYkq_ckrRswGwzcJINMCUI')",
+              backgroundImage: "url('/bridal/consultation-bg.svg')",
             }}
             aria-hidden="true"
           />
