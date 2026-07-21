@@ -108,3 +108,15 @@
 .parallax-bg {
   background-attachment: fixed;
 }
+
+/* Scroll reveal animation for homepage */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.8s ease-out;
+}
+
+.scroll-reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
