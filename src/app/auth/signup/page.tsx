@@ -15,7 +15,7 @@ export default function SignupPage() {
           className="absolute inset-0 bg-cover bg-center transition-all duration-700 grayscale hover:grayscale-0"
           style={{
             backgroundImage:
-              "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCc1uP5EvUoxCWd71EzfjYh2QjENrIlYCEwbzzktWWewVmrcnCHufvbd0LzIGSdSYdDeyW4sRAgIiurVFP6_pkYocS4H8DB9lT4OeSyDa5uv4t3yQbAeWsX4PL-IFRK4rqXfZRP2V46w3MIn64AjzxuYMky8OEhC58cRKMfoVbci_j78XAtc7yYSZp4tnzhG1XgNFV0lhspjXKSLFGAGIq1_qXUHyy8Vshx2v38gRFPqgBxsO4CGIWcYvTpHWoZy1oSp8cFEzcOnQ4')",
+              "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDBnAe_QDatEiF92b52JgnZKTdEP1XGiY6_JBbpbLxz5-0FLxT2wjpDsOm0whtk9ky2sO9uyV_qeXdse6RMVr7Q04C43oTTHITi5doYZ3cWvdYf552hM5OtZ1WNtTW_mg1H5c7AEzIZq6akdxr29ckNVXEJwgz3AIqOW133XrBeGj4HFMa9M0Smu1ahVqEpbwg3-ih76omoFxkQ-b2NlzeA_0IleltcLJbT4K8jwfY7BeZNMdslIvug_5rzzR2rqcfY8vmOPbaaXlM')",
           }}
           aria-hidden="true"
         />
