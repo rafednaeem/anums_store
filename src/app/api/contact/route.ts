@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { inquirySchema } from '@/lib/validations';
 
 const RATE_LIMIT_WINDOW = 60 * 1000;
@@ -50,7 +50,11 @@ export async function POST(request: NextRequest) {
   }
 
   const data = validation.data;
-  const supabase = await createClient();
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
 
   const { data: inquiry, error: insertError } = await supabase
     .from('inquiries')
