@@ -14,8 +14,7 @@ export default function SignupPage() {
         <div
           className="absolute inset-0 bg-cover bg-center transition-all duration-700 grayscale hover:grayscale-0"
           style={{
-            backgroundImage:
-              "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDBnAe_QDatEiF92b52JgnZKTdEP1XGiY6_JBbpbLxz5-0FLxT2wjpDsOm0whtk9ky2sO9uyV_qeXdse6RMVr7Q04C43oTTHITi5doYZ3cWvdYf552hM5OtZ1WNtTW_mg1H5c7AEzIZq6akdxr29ckNVXEJwgz3AIqOW133XrBeGj4HFMa9M0Smu1ahVqEpbwg3-ih76omoFxkQ-b2NlzeA_0IleltcLJbT4K8jwfY7BeZNMdslIvug_5rzzR2rqcfY8vmOPbaaXlM')",
+            backgroundImage: "url('/signuppageimage/screen.png')",
           }}
           aria-hidden="true"
         />
