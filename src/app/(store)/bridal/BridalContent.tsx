@@ -11,15 +11,15 @@ const heroStats = [
 const bentoItems = [
   {
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAvJBA3VeZFrBxGkVMm4FQh748DHwsMwHEG8U3fOz3TJsbJVTEJUYDoa1zFwPYXt7xUkpm2iAXt4Ap5QDTljL2HMqaf-iHWutINtWcMmtSovc7aggvw-sxfexCiXfRKRtX98hpABFMi2Q2YMY6mhVpxfiMLyRC1D0YweCGFIgCYtejjupViKiRMuSq296D4g9xvJUPl9UXRcKQ-iKWjIaru2epNEla4-XB-XnNflNsuih1-f6TSZvEGV3YN3WEZ2bgDAEqac7kMAVg",
-    alt: "Bride in minimalist white marble hall with trailing dupatta",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuCrHUv8QCCZsSgzc7ztWQ2htu-Wsr-BEBJvECIP48R0SWfXSokNToa6H96fS2W8TREFXB317APd26rQ8egHiY8KQjEfcwqPJYjj4JsxB04X8U6uV7bK50iZJ-jd3D-d8zSKoJ0OiLZfI62W4mYGaaFOa0J6jPn-msrDMOXJFAvhWpyY2E7TsFW45PWpbDFYzWtM49_d9YkRP3GMqrY-IEzCLbSn6-A76PO9un2BCF0MbI6hHQuaP40-GcroRpMrXF8KGY33ILou_KE",
+    alt: "Bride walking through minimalist white marble hall with trailing dupatta",
     label: "The Celestial Veil",
     span: "md:col-span-2 md:row-span-2",
   },
   {
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuC1GQWGpqLlfI_JufPKJ8ua1JwTyEwUnihPHV8Llm0ttwTfDG_YuAcxMUVMkGq1eXGqTGKb9NlP60LCRsQ0MdZzzydgM7jhZCLzysEREACGgpuE0cYA9FEyobBGPUtwR3MTfuvNBoVfCfLwMQEww-sE2PqODFZga7atLoqv2zJ6IAYTosFScnH-B4WaO2yDSVM6HTPfF10fyMH7-ls7NDm8L4U8wvUKUkYNAQebESVuT29_zukT6sbXs-JXkkfGv0WZIbtL_lDoGDs",
-    alt: "Artisan hands weaving gold threads into floral pattern",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuCV2u_DlN-BR_zpdaxrjZT20uQ86vJcCPnjVYyPiD9qOYl66BdFN533fi-Xsq11IyMHxrUhBGdYB6mUPmqCJ1mjTiTMnkz02nokrtOKRpCNnstHJzOFeJhF79AEmgFBu_jQA9O-q1oKUDPOUjeV-_TMldH-rQDRO56x04c2W4MGRpwAnL1vbxyJbaqWVvMeJ5uHGpU6gAxWUU6sovl5jGFoNZyV_fpx5gG-o7dHE_gWxKftdjEb26KZ-rVu9AYTqgPyaE0xuu2h9Fk",
+    alt: "Artisan hands weaving gold threads into floral pattern on embroidery frame",
     label: "Master Craftsman at Work",
     span: "md:col-span-2 md:row-span-1",
   },
@@ -91,7 +91,7 @@ export default function BridalContent() {
             className="parallax-bg w-full h-full bg-cover bg-center transition-transform duration-[10s]"
             style={{
               backgroundImage:
-                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDp1V4zAY5U_E0Ow3reNMKxdf6f5TCv0uhnpYzHWmaEKKv3FhLZudM7FZW4wcvgobAJHLfcXXKy8XIBVJQKjCUl7SDKUPEGk46ZeENeBHxQlbu06VEGTa0XqWRXtwMnfsEoljxmbnSiu1xKDF5EVGmvCu8-vjanh0y3hebnmf1SG0v-xJxhhq5K9JR8ScUvGXnDGGNLEdL1HY6OIy5AnZwU8HtCDhzXRHp60SD7XZH5yjzXeP4DLblyZU2ZvU-Bm-v6qPyo9AHyfvk')",
+                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDq8_FVCVi5TdGbjUDIMpx2fOTRmHsj4Q6njs6FR_Ya_fofsw0lCgA0eLXN70cxaC6vnltdUmxi_L0d_Ntxdt3be377TAmrt7vqPTAd4X9cwRxRaRrCL-hcFCj16GvRI3q4cKuJaXsfPuTAVhg6uzTwCMZrRV7ejl9dZZQyMkWIDwL6R86D_f_sw4fKxXmndLtl2PICQMOCBlF_xjnYDF0uTyPgQgNKp_N77UMhXuPzrh8qbaGowAQAl-nnGvx1AC1SPMf9BaOJYZU')",
               transform: `scale(${heroScale})`,
             }}
             aria-hidden="true"
@@ -149,7 +149,7 @@ export default function BridalContent() {
           <div className="md:col-span-7 reveal-on-scroll">
             <div className="relative aspect-[4/5] w-full overflow-hidden">
               <Image
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuXaIjv1QHWu7Ppo6UYCNDLXoFF6w03_eXXQyoeqSNRbEfCUwbVeGlTyJeq3sDDlRaNlP2TcSOesLHbhUw3QMDb8TDLRLPitYgMVk66WLKN9kogeWuJ_-ZzmVcqaZXRUKZvQ-ZQp5oc7ZJbpQvDfme_Bd7WU-VkxIAzLH5NsN4D3QQYfjtY3YPLehLxONmLhOkNdjkH1u7gj1lsU93tHt3bpkRgisgiaJwab4Ek2Ofs9sFfPvr4aMnRhq8FepeajTFhJjQQKcztUs"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1bt-q-1oV02QJjziWWvTZ3keIt90a4I4k1dl0kkht05ettXeqcG0BTJbxu32vpLi-WA0r0nV7Fei4QoUfgPOqjjC6F4daylnCE_z22TcJVvDC2xIHy_hAkmo0o-3nJT8HB5GoDMv0XxRn4hzRgMl6gCd_Mfl5aBNfi_9I5EMlic8EnYdxYkIVHDnh5AfvwS5B5bQ2sPnx3va2cdKDfokA2vRrAVehpNK1ZSEUcoAAKlt0Gx5ArMUlB5WvGqGxCSz87REwkQCmtyA"
                 alt="Detailed silver and pearl embroidery on deep crimson bridal gown"
                 fill
                 className="object-cover transition-transform duration-700 hover:scale-105"
