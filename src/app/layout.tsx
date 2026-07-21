@@ -30,6 +30,13 @@ export const metadata: Metadata = {
   },
   description:
     "Discover handcrafted products that blend tradition with modern elegance. Anums Store offers curated collections with timeless design and sustainable craftsmanship.",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: "/favicon.png",
+  },
   openGraph: {
     type: "website",
     siteName: storeName,
@@ -64,6 +71,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
+      <head>
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
+      </head>
       <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased`}>
         <CartProvider>
           <AuthProvider>
@@ -76,4 +88,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-}
+};
