@@ -3,11 +3,14 @@
 import { useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { cms } from "@/lib/cms"
 import ProductCard from "@/components/store/ProductCard"
 
 export default function HomeContent({
+  content = {},
   products,
 }: {
+  content?: Record<string, string>
   products?: Array<{
     id: string
     slug: string
@@ -46,20 +49,19 @@ export default function HomeContent({
       <section className="relative overflow-hidden bg-gradient-to-br from-ethereal-cream via-white to-ethereal-cream">
         <div className="mx-auto flex min-h-[70vh] max-w-7xl flex-col items-center justify-center px-4 text-center sm:px-6 lg:px-8">
           <p className="mb-4 text-sm font-medium uppercase tracking-widest text-ethereal-maroon">
-            New Season
+            {cms(content, "hero", "eyebrow", "New Season")}
           </p>
           <h1 className="font-heading text-4xl font-bold tracking-tight text-ethereal-dark sm:text-5xl lg:text-6xl">
-            Curated Pakistani Fashion
+            {cms(content, "hero", "title", "Curated Pakistani Fashion")}
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-            Discover collections that blend traditional artistry with modern
-            silhouettes — crafted for the contemporary woman.
+            {cms(content, "hero", "description", "Discover collections that blend traditional artistry with modern silhouettes — crafted for the contemporary woman.")}
           </p>
           <Link
-            href="/shop"
+            href={cms(content, "hero", "cta_link", "/shop")}
             className="mt-8 inline-flex items-center rounded-md bg-ethereal-dark px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-ethereal-dark/90"
           >
-            Shop Collection
+            {cms(content, "hero", "cta_text", "Shop Collection")}
           </Link>
         </div>
       </section>
@@ -67,19 +69,28 @@ export default function HomeContent({
       {/* ── Marquee Banner ──────────────────────────── */}
       <div className="overflow-hidden border-y bg-ethereal-dark py-3">
         <div className="animate-marquee flex whitespace-nowrap">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <span
-              key={i}
-              className="mx-8 text-xs font-medium uppercase tracking-widest text-white/80"
-            >
-              Free Shipping on Orders Over Rs. 5,000
-              <span className="mx-4 text-ethereal-maroon">&#10022;</span>
-              New Bridal Collection Now Available
-              <span className="mx-4 text-ethereal-maroon">&#10022;</span>
-              Handcrafted with Love
-              <span className="mx-4 text-ethereal-maroon">&#10022;</span>
-            </span>
-          ))}
+          {Array.from({ length: 4 }).map((_, i) => {
+            let items: string[]
+            try {
+              items = JSON.parse(cms(content, "marquee", "items", '["Free Shipping on Orders Over Rs. 5,000","New Bridal Collection Now Available","Handcrafted with Love"]'))
+            } catch {
+              items = ["Free Shipping on Orders Over Rs. 5,000", "New Bridal Collection Now Available", "Handcrafted with Love"]
+            }
+            return (
+              <span
+                key={i}
+                className="mx-8 text-xs font-medium uppercase tracking-widest text-white/80"
+              >
+                {items.map((item, j) => (
+                  <span key={j}>
+                    {j > 0 && <span className="mx-4 text-ethereal-maroon">&#10022;</span>}
+                    {item}
+                  </span>
+                ))}
+                <span className="mx-4 text-ethereal-maroon">&#10022;</span>
+              </span>
+            )
+          })}
         </div>
       </div>
 
@@ -87,10 +98,10 @@ export default function HomeContent({
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="font-heading text-3xl font-bold text-ethereal-dark">
-            Featured
+            {cms(content, "featured_products", "title", "Featured")}
           </h2>
           <p className="mt-2 text-muted-foreground">
-            Handpicked favourites from our latest collections.
+            {cms(content, "featured_products", "description", "Handpicked favourites from our latest collections.")}
           </p>
         </div>
 
@@ -102,7 +113,7 @@ export default function HomeContent({
           ) : (
             <div className="col-span-full flex flex-col items-center justify-center rounded-lg border border-dashed border-ethereal-silver/50 bg-ethereal-cream/30 py-20 text-center">
               <p className="text-sm text-muted-foreground">
-                Products coming soon. Check back shortly.
+                {cms(content, "featured_products", "empty_message", "Products coming soon. Check back shortly.")}
               </p>
             </div>
           )}
@@ -114,22 +125,22 @@ export default function HomeContent({
         <div className="px-5 md:px-16 max-w-[1440px] mx-auto">
           <div className="text-center mb-16">
             <span className="font-label-caps text-[12px] tracking-[0.3em] uppercase text-on-surface-variant mb-4 block">
-              Curated Portfolios
+              {cms(content, "categories", "section_label", "Curated Portfolios")}
             </span>
             <h2 className="font-headline-lg text-[40px] leading-[48px]">
-              Explore Our World
+              {cms(content, "categories", "title", "Explore Our World")}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-auto md:h-[800px]">
             {/* Ready to Wear */}
             <Link
-              href="/shop"
+              href={cms(content, "category_1", "link", "/shop")}
               className="md:col-span-8 group relative overflow-hidden h-[400px] md:h-full cursor-pointer"
             >
               <Image
-                src="/home/category-rtw.jpg"
-                alt="Woman in ready-to-wear linen ensemble in heritage courtyard"
+                src={cms(content, "category_1", "image_url", "/home/category-rtw.jpg")}
+                alt={cms(content, "category_1", "image_alt", "Woman in ready-to-wear linen ensemble in heritage courtyard")}
                 fill
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                 sizes="(max-width: 768px) 100vw, 67vw"
@@ -137,13 +148,13 @@ export default function HomeContent({
               <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
               <div className="absolute bottom-10 left-10 text-white">
                 <h3 className="font-headline-md text-[28px] leading-[36px] mb-2">
-                  Ready-to-Wear
+                  {cms(content, "category_1", "title", "Ready-to-Wear")}
                 </h3>
                 <p className="font-body-md text-[16px] leading-[24px] mb-6 opacity-80">
-                  Everyday elegance redefined.
+                  {cms(content, "category_1", "description", "Everyday elegance redefined.")}
                 </p>
                 <span className="font-label-caps text-[12px] tracking-[0.1em] border-b border-white pb-1 uppercase">
-                  Discover Now
+                  {cms(content, "category_1", "cta_text", "Discover Now")}
                 </span>
               </div>
             </Link>
@@ -151,12 +162,12 @@ export default function HomeContent({
             {/* Side Stack */}
             <div className="md:col-span-4 flex flex-col gap-6 h-full">
               <Link
-                href="/bridal"
+                href={cms(content, "category_2", "link", "/bridal")}
                 className="flex-1 group relative overflow-hidden h-[400px] md:h-auto cursor-pointer"
               >
                 <Image
-                  src="/home/category-bridal.jpg"
-                  alt="Bridal ensemble with gold filigree on crimson silk"
+                  src={cms(content, "category_2", "image_url", "/home/category-bridal.jpg")}
+                  alt={cms(content, "category_2", "image_alt", "Bridal ensemble with gold filigree on crimson silk")}
                   fill
                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                   sizes="(max-width: 768px) 100vw, 33vw"
@@ -164,21 +175,21 @@ export default function HomeContent({
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
                 <div className="absolute bottom-8 left-8 text-white">
                   <h3 className="font-headline-md text-[28px] leading-[36px] mb-1">
-                    Bridal
+                    {cms(content, "category_2", "title", "Bridal")}
                   </h3>
                   <span className="font-label-caps text-[12px] tracking-[0.1em] border-b border-white pb-1 uppercase">
-                    Exquisite Craft
+                    {cms(content, "category_2", "cta_text", "Exquisite Craft")}
                   </span>
                 </div>
               </Link>
 
               <Link
-                href="/shop"
+                href={cms(content, "category_3", "link", "/shop")}
                 className="flex-1 group relative overflow-hidden h-[400px] md:h-auto cursor-pointer"
               >
                 <Image
-                  src="/home/category-accessories.jpg"
-                  alt="Velvet clutch and delicate gold jewelry on stone surface"
+                  src={cms(content, "category_3", "image_url", "/home/category-accessories.jpg")}
+                  alt={cms(content, "category_3", "image_alt", "Velvet clutch and delicate gold jewelry on stone surface")}
                   fill
                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                   sizes="(max-width: 768px) 100vw, 33vw"
@@ -186,10 +197,10 @@ export default function HomeContent({
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
                 <div className="absolute bottom-8 left-8 text-white">
                   <h3 className="font-headline-md text-[28px] leading-[36px] mb-1">
-                    Accessories
+                    {cms(content, "category_3", "title", "Accessories")}
                   </h3>
                   <span className="font-label-caps text-[12px] tracking-[0.1em] border-b border-white pb-1 uppercase">
-                    The Finishing Touch
+                    {cms(content, "category_3", "cta_text", "The Finishing Touch")}
                   </span>
                 </div>
               </Link>
@@ -205,21 +216,16 @@ export default function HomeContent({
             <div className="w-16 h-[1px] bg-outline" />
           </div>
           <h2 className="font-headline-lg text-[40px] leading-[48px] mb-8 italic">
-            &ldquo;Our story is woven into every stitch, bridging generations of
-            artistry with the spirit of today.&rdquo;
+            &ldquo;{cms(content, "brand_ethos", "quote", "Our story is woven into every stitch, bridging generations of artistry with the spirit of today.")}&rdquo;
           </h2>
           <p className="font-body-lg text-[18px] leading-[28px] text-on-surface-variant mb-12">
-            Founded in the heart of Pakistan&apos;s rich textile heritage, Anums
-            Store is dedicated to preserving the ancient techniques of
-            hand-weaving, block printing, and needlework. By collaborating with
-            local artisans, we ensure that every garment tells a story of skill,
-            patience, and unparalleled beauty.
+            {cms(content, "brand_ethos", "description", "Founded in the heart of Pakistan's rich textile heritage, Anums Store is dedicated to preserving the ancient techniques of hand-weaving, block printing, and needlework. By collaborating with local artisans, we ensure that every garment tells a story of skill, patience, and unparalleled beauty.")}
           </p>
           <Link
-            href="/our-story"
+            href={cms(content, "brand_ethos", "cta_link", "/our-story")}
             className="inline-block border border-primary text-primary font-button text-[14px] leading-[20px] tracking-[0.2em] px-12 py-4 uppercase hover:bg-primary hover:text-white transition-all duration-300"
           >
-            Our Heritage
+            {cms(content, "brand_ethos", "cta_text", "Our Heritage")}
           </Link>
         </div>
       </section>

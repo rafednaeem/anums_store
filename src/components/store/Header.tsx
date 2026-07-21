@@ -5,18 +5,18 @@ import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, User, Heart, ShoppingBag } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { cms } from "@/lib/cms"
 import { storeName } from "@/lib/constants"
 import { useCart } from "@/hooks/useCart"
 import { useWishlist } from "@/hooks/useWishlist"
 import CartDrawer from "./CartDrawer"
 
-const navLinks = [
-  { href: "/shop", label: "Shop" },
-  { href: "/bridal", label: "Bridal" },
-  { href: "/our-story", label: "Our Story" },
-]
-
-export default function Header() {
+export default function Header({ content = {} }: { content?: Record<string, string> }) {
+  const navLinks = [
+    { href: cms(content, "nav", "link_1_href", "/shop"), label: cms(content, "nav", "link_1_label", "Shop") },
+    { href: cms(content, "nav", "link_2_href", "/bridal"), label: cms(content, "nav", "link_2_label", "Bridal") },
+    { href: cms(content, "nav", "link_3_href", "/our-story"), label: cms(content, "nav", "link_3_label", "Our Story") },
+  ]
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { totalItems } = useCart()

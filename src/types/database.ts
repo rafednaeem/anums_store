@@ -590,6 +590,41 @@ export interface Database {
           updated_at?: string
         }
       }
+      page_content: {
+        Row: {
+          id: string
+          page_slug: string
+          section_key: string
+          content_key: string
+          content_value: string | null
+          content_type: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          page_slug: string
+          section_key: string
+          content_key: string
+          content_value?: string | null
+          content_type?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          page_slug?: string
+          section_key?: string
+          content_key?: string
+          content_value?: string | null
+          content_type?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
       email_logs: {
         Row: {
           id: string

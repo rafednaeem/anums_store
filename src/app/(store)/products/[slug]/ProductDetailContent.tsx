@@ -7,6 +7,7 @@ import { Minus, Plus, Star, ChevronLeft, ChevronRight, Loader2 } from "lucide-re
 import { useCart } from "@/hooks/useCart"
 import { createClient } from "@/lib/supabase/client"
 import { formatPrice } from "@/lib/helpers"
+import { cms } from "@/lib/cms"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,7 @@ interface Variant {
 }
 
 interface ProductDetailProps {
+  content?: Record<string, string>
   product: {
     id: string
     name: string
@@ -48,7 +50,7 @@ interface Review {
   created_at: string
 }
 
-export default function ProductDetailContent({ product }: ProductDetailProps) {
+export default function ProductDetailContent({ content = {}, product }: ProductDetailProps) {
   const { addItem } = useCart()
   const supabase = createClient()
 
@@ -461,16 +463,16 @@ export default function ProductDetailContent({ product }: ProductDetailProps) {
           {/* Trust badges */}
           <div className="mt-8 grid grid-cols-3 gap-4 rounded-lg border border-ethereal-silver/30 p-4 text-center text-xs text-muted-foreground">
             <div>
-              <p className="font-semibold text-ethereal-dark">Free Shipping</p>
-              <p className="mt-1">On orders over Rs. 10,000</p>
+              <p className="font-semibold text-ethereal-dark">{cms(content, "trust_badges", "badge_1_title", "Free Shipping")}</p>
+              <p className="mt-1">{cms(content, "trust_badges", "badge_1_text", "On orders over Rs. 10,000")}</p>
             </div>
             <div>
-              <p className="font-semibold text-ethereal-dark">Easy Returns</p>
-              <p className="mt-1">7-day return policy</p>
+              <p className="font-semibold text-ethereal-dark">{cms(content, "trust_badges", "badge_2_title", "Easy Returns")}</p>
+              <p className="mt-1">{cms(content, "trust_badges", "badge_2_text", "7-day return policy")}</p>
             </div>
             <div>
-              <p className="font-semibold text-ethereal-dark">Secure Payment</p>
-              <p className="mt-1">100% secure checkout</p>
+              <p className="font-semibold text-ethereal-dark">{cms(content, "trust_badges", "badge_3_title", "Secure Payment")}</p>
+              <p className="mt-1">{cms(content, "trust_badges", "badge_3_text", "100% secure checkout")}</p>
             </div>
           </div>
         </div>
@@ -479,7 +481,7 @@ export default function ProductDetailContent({ product }: ProductDetailProps) {
       {/* Reviews Section */}
       <section className="mt-16">
         <h2 className="font-heading text-2xl font-bold text-ethereal-dark">
-          Customer Reviews
+          {cms(content, "reviews", "title", "Customer Reviews")}
         </h2>
 
         {reviewsLoading ? (
@@ -489,7 +491,7 @@ export default function ProductDetailContent({ product }: ProductDetailProps) {
         ) : reviews.length === 0 ? (
           <div className="mt-8 rounded-lg border border-dashed border-ethereal-silver/50 bg-ethereal-cream/30 py-10 text-center">
             <p className="text-sm text-muted-foreground">
-              No reviews yet. Be the first to review this product!
+              {cms(content, "reviews", "empty_message", "No reviews yet. Be the first to review this product!")}
             </p>
           </div>
         ) : (
@@ -542,7 +544,7 @@ export default function ProductDetailContent({ product }: ProductDetailProps) {
       {relatedProducts.length > 0 && (
         <section className="mt-16">
           <h2 className="font-heading text-2xl font-bold text-ethereal-dark">
-            You May Also Like
+            {cms(content, "related", "title", "You May Also Like")}
           </h2>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-4">
             {relatedProducts.map((rp: unknown) => {

@@ -583,3 +583,121 @@ export async function updateInventory(variantId: string, inventoryCount: number)
   if (error) throw new Error(error.message)
   revalidatePath("/admin/inventory")
 }
+
+// ============================================================
+// CMS / Page Content Actions
+// ============================================================
+
+export async function getPageContents(pageSlug?: string) {
+  await requireAdminThrow()
+  const supabase = createServiceRoleClient() as Any
+
+  let query = supabase.from("page_content").select("*").order("sort_order", { ascending: true })
+  if (pageSlug) {
+    query = query.eq("page_slug", pageSlug)
+  }
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+  return data || []
+}
+
+export async function savePageContent(
+  pageSlug: string,
+  sectionKey: string,
+  contentKey: string,
+  contentValue: string,
+  contentType: string = "text"
+): Promise<ActionResult> {
+  try {
+    await requireAdminThrow()
+    const supabase = createServiceRoleClient() as Any
+
+    const { error } = await supabase
+      .from("page_content")
+      .upsert(
+        {
+          page_slug: pageSlug,
+          section_key: sectionKey,
+          content_key: contentKey,
+          content_value: contentValue,
+          content_type: contentType,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "page_slug,section_key,content_key" }
+      )
+
+    if (error) return { ok: false, error: error.message }
+
+    revalidatePath("/admin/content")
+    revalidatePath("/")
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[savePageContent] Error:", msg)
+    return { ok: false, error: msg }
+  }
+}
+
+export async function savePageContents(
+  pageSlug: string,
+  entries: Array<{
+    section_key: string
+    content_key: string
+    content_value: string
+    content_type?: string
+  }>
+): Promise<ActionResult> {
+  try {
+    await requireAdminThrow()
+    const supabase = createServiceRoleClient() as Any
+
+    const rows = entries.map((e) => ({
+      page_slug: pageSlug,
+      section_key: e.section_key,
+      content_key: e.content_key,
+      content_value: e.content_value,
+      content_type: e.content_type || "text",
+      updated_at: new Date().toISOString(),
+    }))
+
+    const { error } = await supabase
+      .from("page_content")
+      .upsert(rows, { onConflict: "page_slug,section_key,content_key" })
+
+    if (error) return { ok: false, error: error.message }
+
+    revalidatePath("/admin/content")
+    // Revalidate all public pages that might use this content
+    revalidatePath("/")
+    revalidatePath("/shop")
+    revalidatePath("/bridal")
+    revalidatePath("/our-story")
+    revalidatePath("/contact")
+    revalidatePath("/shipping-returns")
+    revalidatePath("/privacy-policy")
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[savePageContents] Error:", msg)
+    return { ok: false, error: msg }
+  }
+}
+
+export async function deletePageContent(id: string): Promise<ActionResult> {
+  try {
+    await requireAdminThrow()
+    const supabase = createServiceRoleClient() as Any
+
+    const { error } = await supabase.from("page_content").delete().eq("id", id)
+    if (error) return { ok: false, error: error.message }
+
+    revalidatePath("/admin/content")
+    revalidatePath("/")
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[deletePageContent] Error:", msg)
+    return { ok: false, error: msg }
+  }
+}

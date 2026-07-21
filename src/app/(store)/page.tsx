@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
+import { getPageContent } from "@/lib/cms"
 import { storeName, storeUrl } from "@/lib/constants"
 import HomeContent from "./HomeContent"
 
@@ -31,13 +32,16 @@ const jsonLd = {
 export default async function StoreHomePage() {
   const supabase = await createClient()
 
-  const { data: featuredProducts } = await supabase
-    .from("products")
-    .select("*, category:categories(name, slug), product_images(image_url, is_primary, sort_order)")
-    .eq("is_active", true)
-    .eq("is_featured", true)
-    .order("created_at", { ascending: false })
-    .limit(8)
+  const [content, { data: featuredProducts }] = await Promise.all([
+    getPageContent("home"),
+    supabase
+      .from("products")
+      .select("*, category:categories(name, slug), product_images(image_url, is_primary, sort_order)")
+      .eq("is_active", true)
+      .eq("is_featured", true)
+      .order("created_at", { ascending: false })
+      .limit(8),
+  ])
 
   const featured = (featuredProducts || []).map((p) => ({
     id: p.id,
@@ -57,7 +61,7 @@ export default async function StoreHomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <HomeContent products={featured} />
+      <HomeContent content={content} products={featured} />
     </>
   )
 }

@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SlidersHorizontal, ChevronDown } from "lucide-react"
+import { cms } from "@/lib/cms"
 import ProductCard from "@/components/store/ProductCard"
 import { cn } from "@/lib/utils"
 
@@ -30,6 +31,7 @@ interface ShopContentProps {
   products: Product[]
   categories: Category[]
   activeCategory?: string
+  content?: Record<string, string>
 }
 
 const ITEMS_PER_PAGE = 9
@@ -44,6 +46,7 @@ export default function ShopContent({
   products,
   categories,
   activeCategory,
+  content = {},
 }: ShopContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -286,10 +289,10 @@ export default function ShopContent({
           {sortedAndFiltered.length === 0 ? (
             <div className="flex flex-col items-center justify-center border border-dashed border-border/50 bg-muted/30 py-20 text-center">
               <p className="font-heading text-lg text-ethereal-dark">
-                No products found
+                {cms(content, "empty_state", "title", "No products found")}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Try adjusting your search or filter criteria.
+                {cms(content, "empty_state", "description", "Try adjusting your search or filter criteria.")}
               </p>
               <button
                 onClick={() => handleCategoryChange(null)}

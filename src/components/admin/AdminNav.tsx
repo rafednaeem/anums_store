@@ -11,6 +11,7 @@ import {
   Warehouse,
   Star,
   MessageSquare,
+  FileText,
   Settings,
   LogOut,
   Menu,
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/admin/inventory", label: "Inventory", icon: Warehouse },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
+  { href: "/admin/content", label: "Website Content", icon: FileText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ]
 

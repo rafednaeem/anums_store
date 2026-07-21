@@ -2,26 +2,9 @@
 
 import { useEffect, useRef } from "react"
 import Image from "next/image"
+import { cms } from "@/lib/cms"
 
-const valueProps = [
-  {
-    title: "Ethical Sourcing",
-    description:
-      "We ensure fair living wages and safe working environments for all our partner artisans, fostering community growth and dignity.",
-  },
-  {
-    title: "Timeless Design",
-    description:
-      "Our aesthetic transcends seasons. We create investment pieces designed to be cherished and passed down through generations.",
-  },
-  {
-    title: "Sustainable Future",
-    description:
-      "By prioritizing natural fibers and traditional low-impact methods, we minimize our ecological footprint on the planet.",
-  },
-]
-
-export default function OurStoryContent() {
+export default function OurStoryContent({ content = {} }: { content?: Record<string, string> }) {
   const heroRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -53,19 +36,17 @@ export default function OurStoryContent() {
           {/* Text */}
           <div className="md:col-span-5 order-2 md:order-1">
             <span className="block font-label-caps text-[12px] tracking-[0.1em] text-heritage-accent mb-6 uppercase">
-              Heritage &amp; Modernity
+              {cms(content, "hero", "label", "Heritage & Modernity")}
             </span>
             <h2 className="font-display-lg text-[64px] leading-[72px] tracking-[-0.02em] mb-8">
-              Handcrafted with Love
+              {cms(content, "hero", "title", "Handcrafted with Love")}
             </h2>
             <p className="font-body-lg text-[18px] leading-[28px] text-on-surface-variant mb-10 max-w-md">
-              Our journey began with a simple vision: to preserve the dying arts
-              of traditional Pakistani craftsmanship while elevating them for the
-              modern global stage.
+              {cms(content, "hero", "description", "Our journey began with a simple vision: to preserve the dying arts of traditional Pakistani craftsmanship while elevating them for the modern global stage.")}
             </p>
             <div className="h-px w-32 bg-black/10 mb-10" />
             <p className="font-body-md text-[16px] leading-[24px] italic text-on-surface/60">
-              Founded in Lahore, 2024.
+              {cms(content, "hero", "subtext", "Founded in Lahore, 2024.")}
             </p>
           </div>
 
@@ -73,8 +54,8 @@ export default function OurStoryContent() {
           <div className="md:col-span-7 order-1 md:order-2 mb-12 md:mb-0">
             <div className="relative aspect-[4/5] md:aspect-[16/10] overflow-hidden group">
               <Image
-                src="/our-story/hero.jpg"
-                alt="Master craftsman's hands embroidering gold threads on luxurious off-white silk"
+                src={cms(content, "hero", "image_url", "/our-story/hero.jpg")}
+                alt={cms(content, "hero", "image_alt", "Master craftsman's hands embroidering gold threads on luxurious off-white silk")}
                 fill
                 className="object-cover grayscale-[20%] group-hover:scale-105 transition-transform duration-1000"
                 sizes="(max-width: 768px) 100vw, 58vw"
@@ -82,7 +63,7 @@ export default function OurStoryContent() {
               />
               <div className="absolute bottom-6 right-6 text-white bg-black/20 backdrop-blur-sm px-4 py-2">
                 <span className="font-label-caps text-[10px] tracking-[0.2em] uppercase">
-                  Master Craftsman at Work
+                  {cms(content, "hero", "image_overlay", "Master Craftsman at Work")}
                 </span>
               </div>
             </div>
@@ -98,8 +79,8 @@ export default function OurStoryContent() {
               <div className="reveal-on-scroll">
                 <div className="aspect-[3/4] overflow-hidden">
                   <Image
-                    src="/our-story/artisan-blocks.jpg"
-                    alt="Wooden blocks for block printing stained with indigo and ochre dyes"
+                    src={cms(content, "artisans", "image_url", "/our-story/artisan-blocks.jpg")}
+                    alt={cms(content, "artisans", "image_alt", "Wooden blocks for block printing stained with indigo and ochre dyes")}
                     width={800}
                     height={1067}
                     className="w-full h-full object-cover"
@@ -108,19 +89,13 @@ export default function OurStoryContent() {
               </div>
               <div className="reveal-on-scroll">
                 <h3 className="font-headline-lg text-[40px] leading-[48px] mb-8">
-                  Traditional Artistry
+                  {cms(content, "artisans", "title", "Traditional Artistry")}
                 </h3>
                 <p className="font-body-lg text-[18px] leading-[28px] text-on-surface-variant mb-6">
-                  Every garment at Anums Store tells a story of patience. We work
-                  exclusively with fourth-generation artisans who have mastered
-                  the intricate techniques of hand-loom weaving and block
-                  printing.
+                  {cms(content, "artisans", "paragraph_1", "Every garment at Anums Store tells a story of patience. We work exclusively with fourth-generation artisans who have mastered the intricate techniques of hand-loom weaving and block printing.")}
                 </p>
                 <p className="font-body-md text-[16px] leading-[24px] text-on-surface-variant">
-                  Unlike mass-produced fashion, our pieces are born from the
-                  rhythmic sound of the loom and the careful placement of the
-                  block. This deliberate slowness is our protest against the
-                  transience of modern trends.
+                  {cms(content, "artisans", "paragraph_2", "Unlike mass-produced fashion, our pieces are born from the rhythmic sound of the loom and the careful placement of the block. This deliberate slowness is our protest against the transience of modern trends.")}
                 </p>
 
               </div>
@@ -134,12 +109,10 @@ export default function OurStoryContent() {
         <div className="px-5 md:px-16 text-center reveal-on-scroll">
           <blockquote className="max-w-4xl mx-auto">
             <p className="font-display-lg text-[64px] leading-[72px] tracking-[-0.02em] italic mb-10 px-4 md:px-0">
-              &ldquo;We don&apos;t just create clothes; we preserve a legacy of
-              hands that have spent lifetimes perfecting the art of
-              beauty.&rdquo;
+              &ldquo;{cms(content, "quote", "text", "We don't just create clothes; we preserve a legacy of hands that have spent lifetimes perfecting the art of beauty.")}&rdquo;
             </p>
             <footer className="font-label-caps text-[12px] tracking-[0.1em] uppercase opacity-60">
-              — Anum Rashid, Founder
+              {cms(content, "quote", "attribution", "— Anum Rashid, Founder")}
             </footer>
           </blockquote>
         </div>
@@ -148,7 +121,11 @@ export default function OurStoryContent() {
       {/* ── Value Propositions ─────────────────────── */}
       <section className="py-[120px] px-5 md:px-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
-          {valueProps.map((item, i) => (
+          {[
+            { title: cms(content, "values", "value_1_title", "Ethical Sourcing"), description: cms(content, "values", "value_1_description", "We ensure fair living wages and safe working environments for all our partner artisans, fostering community growth and dignity.") },
+            { title: cms(content, "values", "value_2_title", "Timeless Design"), description: cms(content, "values", "value_2_description", "Our aesthetic transcends seasons. We create investment pieces designed to be cherished and passed down through generations.") },
+            { title: cms(content, "values", "value_3_title", "Sustainable Future"), description: cms(content, "values", "value_3_description", "By prioritizing natural fibers and traditional low-impact methods, we minimize our ecological footprint on the planet.") },
+          ].map((item, i) => (
             <div
               key={item.title}
               className="reveal-on-scroll"

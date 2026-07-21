@@ -6,13 +6,16 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { cms } from "@/lib/cms"
 import { inquirySchema, type InquiryInput } from "@/lib/validations"
 
 export default function ContactContent({
+  content = {},
   email,
   phone,
   whatsapp,
 }: {
+  content?: Record<string, string>
   email?: string
   phone?: string
   whatsapp?: string
@@ -68,8 +71,8 @@ export default function ContactContent({
       <section className="relative h-[614px] md:h-[716px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/20 z-10" />
         <Image
-          src="/contact/hero.jpg"
-          alt="Intricate ivory Pakistani bridal gown with hand-stitched silver embroidery"
+          src={cms(content, "hero", "image_url", "/contact/hero.jpg")}
+          alt={cms(content, "hero", "image_alt", "Intricate ivory Pakistani bridal gown with hand-stitched silver embroidery")}
           fill
           className="object-cover"
           sizes="100vw"
@@ -77,10 +80,10 @@ export default function ContactContent({
         />
         <div className="relative z-20 text-center px-5">
           <h1 className="font-display-lg text-[32px] leading-[40px] md:text-[64px] md:leading-[72px] tracking-[-0.02em] text-on-primary mb-4">
-            Contact Us
+            {cms(content, "hero", "title", "Contact Us")}
           </h1>
           <p className="font-body-lg text-[18px] leading-[28px] text-on-primary/90 max-w-xl mx-auto">
-            Have a question? We&apos;d love to hear from you.
+            {cms(content, "hero", "description", "Have a question? We'd love to hear from you.")}
           </p>
         </div>
       </section>
@@ -92,31 +95,30 @@ export default function ContactContent({
           <div className="space-y-10">
             <div className="border-l-2 border-primary pl-6 py-2">
               <h2 className="font-headline-md text-[28px] leading-[36px] text-primary">
-                Send us a message
+                {cms(content, "form", "heading", "Send us a message")}
               </h2>
             </div>
 
             {isSuccess ? (
               <div className="border border-green-200 bg-green-50 p-6 text-center">
                 <h3 className="text-lg font-semibold text-green-800">
-                  Message sent!
+                  {cms(content, "form", "success_heading", "Message sent!")}
                 </h3>
                 <p className="mt-2 text-sm text-green-700">
-                  Thank you for reaching out. We&apos;ll get back to you as soon
-                  as possible.
+                  {cms(content, "form", "success_text", "Thank you for reaching out. We'll get back to you as soon as possible.")}
                 </p>
                 <button
                   onClick={() => setIsSuccess(false)}
                   className="mt-4 text-sm font-medium text-green-800 underline-offset-4 hover:underline"
                 >
-                  Send another message
+                  {cms(content, "form", "success_button", "Send another message")}
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                 <div className="space-y-2">
                   <label className="font-label-caps text-[12px] tracking-[0.1em] text-on-surface-variant block uppercase">
-                    Name *
+                    {cms(content, "form", "name_label", "Name *")}
                   </label>
                   <input
                     {...register("name")}
@@ -129,7 +131,7 @@ export default function ContactContent({
 
                 <div className="space-y-2">
                   <label className="font-label-caps text-[12px] tracking-[0.1em] text-on-surface-variant block uppercase">
-                    Email *
+                    {cms(content, "form", "email_label", "Email *")}
                   </label>
                   <input
                     type="email"
@@ -143,7 +145,7 @@ export default function ContactContent({
 
                 <div className="space-y-2">
                   <label className="font-label-caps text-[12px] tracking-[0.1em] text-on-surface-variant block uppercase">
-                    Subject *
+                    {cms(content, "form", "subject_label", "Subject *")}
                   </label>
                   <input
                     {...register("subject")}
@@ -156,7 +158,7 @@ export default function ContactContent({
 
                 <div className="space-y-2">
                   <label className="font-label-caps text-[12px] tracking-[0.1em] text-on-surface-variant block uppercase">
-                    Message *
+                    {cms(content, "form", "message_label", "Message *")}
                   </label>
                   <textarea
                     rows={4}
@@ -176,10 +178,10 @@ export default function ContactContent({
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Sending...
+                      {cms(content, "form", "loading_text", "Sending...")}
                     </span>
                   ) : (
-                    "Send Message"
+                    cms(content, "form", "submit_text", "Send Message")
                   )}
                 </button>
               </form>
@@ -190,7 +192,7 @@ export default function ContactContent({
           <div className="bg-white p-12 md:p-16 space-y-12 border border-outline-variant/15 shadow-sm">
             <div className="border-l-2 border-heritage-accent pl-6 py-2">
               <h2 className="font-headline-md text-[28px] leading-[36px] text-primary">
-                Get in touch
+                {cms(content, "info", "heading", "Get in touch")}
               </h2>
             </div>
 
@@ -252,9 +254,7 @@ export default function ContactContent({
 
             <div className="pt-8 border-t border-outline-variant/20">
               <p className="font-body-md text-[16px] leading-[24px] text-on-surface-variant italic">
-                &ldquo;Our artisans are dedicated to preserving the legacy of
-                traditional craftsmanship. We look forward to assisting you with
-                your inquiries.&rdquo;
+                &ldquo;{cms(content, "info", "bottom_quote", "Our artisans are dedicated to preserving the legacy of traditional craftsmanship. We look forward to assisting you with your inquiries.")}&rdquo;
               </p>
             </div>
           </div>
@@ -265,8 +265,8 @@ export default function ContactContent({
       <section className="px-5 md:px-16 mb-[120px]">
         <div className="w-full h-80 overflow-hidden relative">
           <Image
-            src="/contact/divider.jpg"
-            alt="Skilled hands delicately embroidering cream-colored silk with silver thread and pearls"
+            src={cms(content, "divider", "image_url", "/contact/divider.jpg")}
+            alt={cms(content, "divider", "image_alt", "Skilled hands delicately embroidering cream-colored silk with silver thread and pearls")}
             fill
             className="object-cover"
             sizes="100vw"

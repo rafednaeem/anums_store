@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getPageContent } from "@/lib/cms"
 import ProductDetailContent from "./ProductDetailContent"
 import { storeName, storeUrl } from "@/lib/constants"
 
@@ -46,13 +47,16 @@ export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params
   const supabase = await createClient()
 
-  const { data: product, error } = await supabase
-    .from("products")
-    .select(
-      "*, category:categories(id, name, slug), product_images(id, image_url, sort_order, is_primary), product_variants(id, size, color, color_hex, inventory_count, is_active)"
-    )
-    .eq("slug", slug)
-    .single()
+  const [content, { data: product, error }] = await Promise.all([
+    getPageContent("product-detail"),
+    supabase
+      .from("products")
+      .select(
+        "*, category:categories(id, name, slug), product_images(id, image_url, sort_order, is_primary), product_variants(id, size, color, color_hex, inventory_count, is_active)"
+      )
+      .eq("slug", slug)
+      .single(),
+  ])
 
   if (!product || error) {
     notFound()
@@ -92,6 +96,7 @@ export default async function ProductPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <ProductDetailContent
+        content={content}
         product={{
           ...product,
           images,
